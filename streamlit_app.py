@@ -262,22 +262,27 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
 
 
 def _processar_resposta_hitl(resposta: str, analise: dict, explicacao: dict) -> None:
-    """Processa SIM/NÃO do associado após alerta crítico."""
-    if resposta.upper() in ("SIM", "S", "1", "SIM, FUI EU"):
-        _add_msg("ok",
+    """
+    Processa SIM/NÃO do associado após alerta crítico de forma segura.
+    """
+    if resposta.upper() in ('SIM', 'S', '1', 'FUI EU'):
+        _add_msg('ok', (
             "✅ <strong>Compra confirmada por você.</strong><br>"
             "A transação foi liberada e o pagamento será processado normalmente. "
             "Obrigado pela confirmação!"
-        )
+        ))
     else:
-        _add_msg("block",
+        _add_msg('block', (
             "🚫 <strong>Transação bloqueada a seu pedido.</strong><br>"
             "Seu cartão foi protegido. Nossa equipe de segurança foi acionada e "
-            "entrará em contato em breve. Se precisar de ajuda imediata, ligue "
-            "para a Central Sicredi: <strong>0800 724 4440</strong>."
-        )
+            "entrará em contato em breve. Se precisar de ajuda imediata, ligue para "
+            "a Central Sicredi: <strong>0800 724 4440</strong>."
+        ))
+    
+    # Atualiza os estados antes de recarregar o layout do Streamlit
     st.session_state.aguardando_resp = None
-    st.session_state.ultima_analise  = None
+    st.session_state.ultima_analise = None
+
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -388,24 +393,21 @@ st.divider()
 _fill = st.session_state.pop("_fill_tx", None)
 
 if st.session_state.aguardando_resp:
-    # ── Modo HITL: aguardando SIM ou NÃO do associado ────────────────────────
-    st.markdown("""
-<div class="msg-system">
-⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.
-</div>
-""", unsafe_allow_html=True)
-
+    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("✅  Sim, fui eu — liberar", use_container_width=True, type="primary"):
-            _add_msg("user", "✅ Sim, fui eu — pode liberar")
-            _processar_resposta_hitl("SIM", st.session_state.ultima_analise, {})
+        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
+            _add_msg('user', "✅ Sim, fui eu — pode liberar")
+            # Passa a análise guardada em sessão para evitar perda de contexto
+            _processar_resposta_hitl('SIM', st.session_state.ultima_analise, st.session_state.ultima_analise)
+            st.meta_private_attributes = {}
             st.rerun()
     with col2:
-        if st.button("🚫  Não fui eu — bloquear cartão", use_container_width=True):
-            _add_msg("user", "🚫 Não fui eu — bloquear cartão")
-            _processar_resposta_hitl("NÃO", st.session_state.ultima_analise, {})
+        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
+            _add_msg('user', "🚫 Não fui eu — bloquear cartão")
+            _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
             st.rerun()
+
 
 else:
     # ── Formulário normal de transação ────────────────────────────────────────
