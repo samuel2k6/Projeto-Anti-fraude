@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "projeto-anti-fraude-sicredi"
+version = "0.1.0"
+description = "Sistema de Prevenção de Fraudes em Cartões — Sicredi | AI Experiential Learning Lab 2026"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Sicredi — AI Experiential Learning Lab", email = "ai@sicredi.com.br" }
+]
+keywords = ["fraud-detection", "mcp", "watsonx", "anti-fraude", "sicredi"]
+
+# Dependência central: o MCP SDK é suficiente para todos os módulos.
+# As funções de análise usam apenas a stdlib (json, math, datetime).
+dependencies = [
+    "mcp[cli]>=1.9.4,<2.0.0",
+    "python-dotenv>=1.0.0",
+    "streamlit>=1.35.0",
+]
+
+# ---------------------------------------------------------------------------
+# Dependências opcionais por módulo / ambiente
+# ---------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# Conjunto mínimo para rodar qualquer servidor MCP individualmente
+servidor = [
+    "mcp[cli]>=1.9.4,<2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+# Ferramentas de desenvolvimento e testes
+dev = [
+    "mcp[cli]>=1.9.4,<2.0.0",
+    "python-dotenv>=1.0.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+# Tudo junto (dev + servidores)
+all = [
+    "mcp[cli]>=1.9.4,<2.0.0",
+    "python-dotenv>=1.0.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+# ---------------------------------------------------------------------------
+# Scripts de entrada
+# ---------------------------------------------------------------------------
+[project.scripts]
+antifraude-pipeline  = "orchestration.pipeline:executar_pipeline"
+
+# ---------------------------------------------------------------------------
+# Metadados do pacote para o hatchling encontrar os módulos
+# ---------------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = [
+    "orchestration",
+    "mcp_antifraude",
+    "mcp_server",
+    "mcp_carding_detector",
+    "mcp_historico_associado",
+    "mcp_lista_negra",
+    "mcp_motor_decisao",
+    "mcp_notificacoes",
+]
+
+# ---------------------------------------------------------------------------
+# Configuração do pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = [
+    "mcp_antifraude",
+    "orchestration",
+]
+python_files  = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"

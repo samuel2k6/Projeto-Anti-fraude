@@ -1,0 +1,291 @@
+{
+  "metadata": {
+    "descricao": "Dataset fictício para testes locais — Sistema de Prevenção de Fraudes Sicredi",
+    "total_transacoes": 15,
+    "transacoes_normais": 12,
+    "transacoes_fraude": 3,
+    "tipos_fraude_incluidos": [
+      "F-001: Carding / Ataque de Força Bruta",
+      "F-002: Viagem Impossível por GPS",
+      "F-003: Transação Fora do Padrão do Associado"
+    ],
+    "gerado_em": "2026-11-01T20:00:00Z",
+    "score_suspeito_escala": "0.0 (legítima) a 1.0 (fraude certa)"
+  },
+  "transacoes": [
+    {
+      "_comentario": "✅ NORMAL — Compra habitual de supermercado em Porto Alegre, valor dentro do padrão",
+      "associado_id": "assoc-001-rs",
+      "transacao_id": "txn-20261101-0001",
+      "valor": 187.43,
+      "categoria": "Supermercado",
+      "localizacao": {
+        "latitude": -30.0346,
+        "longitude": -51.2177,
+        "cidade": "Porto Alegre",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T10:15:22Z",
+      "score_suspeito_esperado": 0.05
+    },
+    {
+      "_comentario": "✅ NORMAL — Abastecimento de combustível, valor médio, localização habitual",
+      "associado_id": "assoc-001-rs",
+      "transacao_id": "txn-20261101-0002",
+      "valor": 312.00,
+      "categoria": "Posto de Combustível",
+      "localizacao": {
+        "latitude": -30.0412,
+        "longitude": -51.2089,
+        "cidade": "Porto Alegre",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T17:42:10Z",
+      "score_suspeito_esperado": 0.08
+    },
+    {
+      "_comentario": "✅ NORMAL — Jantar em restaurante, valor compatível com o perfil do associado",
+      "associado_id": "assoc-002-sc",
+      "transacao_id": "txn-20261101-0003",
+      "valor": 156.80,
+      "categoria": "Restaurante",
+      "localizacao": {
+        "latitude": -27.5954,
+        "longitude": -48.5480,
+        "cidade": "Florianópolis",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T20:30:05Z",
+      "score_suspeito_esperado": 0.06
+    },
+    {
+      "_comentario": "✅ NORMAL — Farmácia, valor baixo, localização próxima à residência do associado",
+      "associado_id": "assoc-003-rs",
+      "transacao_id": "txn-20261101-0004",
+      "valor": 89.50,
+      "categoria": "Farmácia",
+      "localizacao": {
+        "latitude": -29.6869,
+        "longitude": -53.8069,
+        "cidade": "Santa Maria",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T09:05:00Z",
+      "score_suspeito_esperado": 0.04
+    },
+    {
+      "_comentario": "✅ NORMAL — Assinatura de streaming digital, transação online recorrente esperada",
+      "associado_id": "assoc-002-sc",
+      "transacao_id": "txn-20261101-0005",
+      "valor": 39.90,
+      "categoria": "Streaming / Entretenimento Digital",
+      "localizacao": {
+        "latitude": -27.5954,
+        "longitude": -48.5480,
+        "cidade": "Florianópolis",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T00:05:12Z",
+      "score_suspeito_esperado": 0.10
+    },
+    {
+      "_comentario": "✅ NORMAL — Compra em livraria, valor moderado, cidade habitual do associado",
+      "associado_id": "assoc-004-pr",
+      "transacao_id": "txn-20261101-0006",
+      "valor": 124.70,
+      "categoria": "Livraria / Papelaria",
+      "localizacao": {
+        "latitude": -25.4284,
+        "longitude": -49.2733,
+        "cidade": "Curitiba",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T14:22:38Z",
+      "score_suspeito_esperado": 0.07
+    },
+    {
+      "_comentario": "✅ NORMAL — Pagamento de academia, débito recorrente mensal, perfil esperado",
+      "associado_id": "assoc-003-rs",
+      "transacao_id": "txn-20261101-0007",
+      "valor": 99.90,
+      "categoria": "Academia / Fitness",
+      "localizacao": {
+        "latitude": -29.6918,
+        "longitude": -53.8010,
+        "cidade": "Santa Maria",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T07:10:00Z",
+      "score_suspeito_esperado": 0.05
+    },
+    {
+      "_comentario": "✅ NORMAL — Compra em loja de roupas, valor dentro do perfil, shopping habitual",
+      "associado_id": "assoc-004-pr",
+      "transacao_id": "txn-20261101-0008",
+      "valor": 349.00,
+      "categoria": "Vestuário / Moda",
+      "localizacao": {
+        "latitude": -25.4189,
+        "longitude": -49.2781,
+        "cidade": "Curitiba",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T16:55:14Z",
+      "score_suspeito_esperado": 0.12
+    },
+    {
+      "_comentario": "⚠️ SUSPEITO LEVE — Compra online de eletrônico de valor elevado, porém primeiro acesso no device",
+      "associado_id": "assoc-001-rs",
+      "transacao_id": "txn-20261101-0009",
+      "valor": 2799.00,
+      "categoria": "E-commerce / Eletrônicos",
+      "localizacao": {
+        "latitude": -23.5505,
+        "longitude": -46.6333,
+        "cidade": "São Paulo",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T23:47:01Z",
+      "score_suspeito_esperado": 0.58
+    },
+    {
+      "_comentario": "⚠️ SUSPEITO MODERADO — Transferência para conta desconhecida de alto valor, fora do horário habitual",
+      "associado_id": "assoc-002-sc",
+      "transacao_id": "txn-20261101-0010",
+      "valor": 4500.00,
+      "categoria": "Transferência Financeira",
+      "localizacao": {
+        "latitude": -27.5954,
+        "longitude": -48.5480,
+        "cidade": "Florianópolis",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T03:22:44Z",
+      "score_suspeito_esperado": 0.65
+    },
+    {
+      "_comentario": "🚨 FRAUDE F-001 — CARDING/FORÇA BRUTA: 3 transações de valor irrisório (teste de cartão) no mesmo estabelecimento em menos de 4 minutos, seguidas de tentativa de compra alta",
+      "_tipo_fraude": "F-001: Carding / Ataque de Força Bruta",
+      "_detalhes_fraude": "Fraudador testa validade do cartão com micropagamentos (R$1,99; R$0,01; R$2,50) em sequência rápida para confirmar que o cartão está ativo antes de tentar compra maior",
+      "associado_id": "assoc-005-rj",
+      "transacao_id": "txn-20261101-0011",
+      "valor": 1.99,
+      "categoria": "Streaming / Entretenimento Digital",
+      "localizacao": {
+        "latitude": -22.9068,
+        "longitude": -43.1729,
+        "cidade": "Rio de Janeiro",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T02:10:05Z",
+      "score_suspeito_esperado": 0.91,
+      "_sequencia_carding": [
+        { "transacao_id": "txn-20261101-0011", "valor": 1.99, "timestamp": "2026-11-01T02:10:05Z" },
+        { "transacao_id": "txn-20261101-0011b", "valor": 0.01, "timestamp": "2026-11-01T02:11:33Z" },
+        { "transacao_id": "txn-20261101-0011c", "valor": 2.50, "timestamp": "2026-11-01T02:13:48Z" },
+        { "transacao_id": "txn-20261101-0011d", "valor": 3890.00, "timestamp": "2026-11-01T02:14:12Z", "nota": "Tentativa de compra alta bloqueada" }
+      ]
+    },
+    {
+      "_comentario": "🚨 FRAUDE F-002 — VIAGEM IMPOSSÍVEL POR GPS: Associado realizou transação em Porto Alegre às 08:00h e aparece em Tóquio às 10:30h (diferença de 2h30min, distância ~18.500 km — fisicamente impossível)",
+      "_tipo_fraude": "F-002: Viagem Impossível por GPS",
+      "_detalhes_fraude": "Última transação legítima: Porto Alegre, RS às 08:00Z. Nova transação: Tóquio, Japão às 10:31Z. Distância mínima de ~18.500 km. Velocidade implícita: ~7.400 km/h. Impossível para qualquer transporte comercial.",
+      "associado_id": "assoc-001-rs",
+      "transacao_id": "txn-20261101-0012",
+      "valor": 1250.00,
+      "categoria": "Restaurante / Alimentação",
+      "localizacao": {
+        "latitude": 35.6762,
+        "longitude": 139.6503,
+        "cidade": "Tóquio",
+        "pais": "JP"
+      },
+      "timestamp": "2026-11-01T10:31:00Z",
+      "_ultima_transacao_legitima": {
+        "cidade": "Porto Alegre",
+        "latitude": -30.0346,
+        "longitude": -51.2177,
+        "timestamp": "2026-11-01T08:00:00Z",
+        "distancia_km": 18500,
+        "tempo_decorrido_min": 151,
+        "velocidade_implicita_kmh": 7351
+      },
+      "score_suspeito_esperado": 0.97
+    },
+    {
+      "_comentario": "🚨 FRAUDE F-003 — TRANSAÇÃO FORA DO PADRÃO DO ASSOCIADO: Associado de perfil rural/agronegócio (ticket médio R$350, categorias: agropecuária, combustível, supermercado) realiza compra de R$12.800 em joalheria em São Paulo",
+      "_tipo_fraude": "F-003: Transação Fora do Padrão do Associado",
+      "_detalhes_fraude": "Perfil histórico: ticket médio R$347, categorias predominantes: Agropecuária (40%), Combustível (25%), Supermercado (20%). Novo evento: R$12.800 em Joalheria de luxo em São Paulo — desvio de +36σ do valor médio e categoria nunca usada antes.",
+      "associado_id": "assoc-006-rs-rural",
+      "transacao_id": "txn-20261101-0013",
+      "valor": 12800.00,
+      "categoria": "Joalheria / Artigos de Luxo",
+      "localizacao": {
+        "latitude": -23.5614,
+        "longitude": -46.6558,
+        "cidade": "São Paulo",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T15:08:33Z",
+      "_perfil_historico_associado": {
+        "ticket_medio": 347.00,
+        "ticket_max_historico": 1200.00,
+        "categorias_frequentes": ["Agropecuária", "Combustível", "Supermercado"],
+        "cidades_frequentes": ["Passo Fundo", "Carazinho", "Erechim"],
+        "desvio_padrao_valor": 210.50,
+        "desvios_do_padrao_atual": 58.6
+      },
+      "score_suspeito_esperado": 0.95
+    },
+    {
+      "_comentario": "✅ NORMAL — Compra de material de construção, valor alto mas dentro do histórico do associado (reforma em andamento)",
+      "associado_id": "assoc-004-pr",
+      "transacao_id": "txn-20261101-0014",
+      "valor": 1890.00,
+      "categoria": "Material de Construção / Home Center",
+      "localizacao": {
+        "latitude": -25.4230,
+        "longitude": -49.2910,
+        "cidade": "Curitiba",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T10:05:50Z",
+      "score_suspeito_esperado": 0.18
+    },
+    {
+      "_comentario": "✅ NORMAL — Pagamento de escola/mensalidade, débito esperado, localização correta",
+      "associado_id": "assoc-003-rs",
+      "transacao_id": "txn-20261101-0015",
+      "valor": 680.00,
+      "categoria": "Educação / Ensino",
+      "localizacao": {
+        "latitude": -29.6869,
+        "longitude": -53.8069,
+        "cidade": "Santa Maria",
+        "pais": "BR"
+      },
+      "timestamp": "2026-11-01T08:30:00Z",
+      "score_suspeito_esperado": 0.06
+    }
+  ],
+  "resumo_scores": {
+    "transacoes_por_faixa": {
+      "0.0_0.39_aprovacao_automatica": {
+        "quantidade": 10,
+        "ids": ["txn-20261101-0001","txn-20261101-0002","txn-20261101-0003","txn-20261101-0004","txn-20261101-0005","txn-20261101-0006","txn-20261101-0007","txn-20261101-0008","txn-20261101-0014","txn-20261101-0015"]
+      },
+      "0.40_0.69_alerta_silencioso": {
+        "quantidade": 2,
+        "ids": ["txn-20261101-0009","txn-20261101-0010"]
+      },
+      "0.70_0.84_confirmacao_associado": {
+        "quantidade": 0,
+        "ids": []
+      },
+      "0.85_1.0_bloqueio": {
+        "quantidade": 3,
+        "ids": ["txn-20261101-0011","txn-20261101-0012","txn-20261101-0013"]
+      }
+    }
+  }
+}

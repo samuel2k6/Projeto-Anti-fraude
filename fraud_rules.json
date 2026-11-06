@@ -1,0 +1,156 @@
+{
+  "_doc": "Motor de Regras e Scoring — Sistema de Prevenção de Fraudes Sicredi",
+  "_versao": "1.0.0",
+  "_atualizado_em": "2026-11-01",
+
+  "configuracao_global": {
+    "score_maximo": 1.0,
+    "score_minimo": 0.0,
+    "thresholds_decisao": {
+      "aprovacao_automatica": { "min": 0.0, "max": 0.39, "acao": "APROVAR", "cor": "verde" },
+      "alerta_silencioso":    { "min": 0.40, "max": 0.69, "acao": "APROVAR_COM_ALERTA", "cor": "amarelo" },
+      "confirmar_associado":  { "min": 0.70, "max": 0.84, "acao": "SOLICITAR_CONFIRMACAO", "cor": "laranja" },
+      "bloqueio_imediato":    { "min": 0.85, "max": 1.0,  "acao": "BLOQUEAR", "cor": "vermelho" }
+    },
+    "timeout_confirmacao_associado_segundos": 120,
+    "janela_historico_transacoes": 30,
+    "fallback_sem_modelo_ml": "usar_apenas_regras_deterministicas"
+  },
+
+  "pesos_fatores": {
+    "_descricao": "Soma dos pesos deve ser igual a 1.0",
+    "F-001_velocidade_transacoes": 0.25,
+    "F-002_coerencia_geografica":  0.30,
+    "F-003_desvio_perfil_associado": 0.25,
+    "F-004_lista_negra_estabelecimento": 0.10,
+    "F-005_horario_atipico": 0.10
+  },
+
+  "regras": [
+    {
+      "codigo": "F-001",
+      "nome": "Carding / Ataque de Força Bruta",
+      "descricao": "Detecta tentativas de validação de cartão por micropagamentos em sequência rápida",
+      "ativo": true,
+      "peso_no_score_final": 0.25,
+      "parametros": {
+        "valor_maximo_micropagamento_brl": 10.00,
+        "quantidade_minima_micropagamentos": 3,
+        "janela_tempo_minutos": 5,
+        "mesma_categoria_ou_estabelecimento": true
+      },
+      "sub_score_se_ativada": 0.95,
+      "explicacao_template": "Detectadas {qtd} transações de valor ≤ R${valor_max} em {janela}min no mesmo estabelecimento/categoria — padrão de carding.",
+      "acoes_adicionais": ["bloquear_cartao_temporariamente", "notificar_analista", "registrar_bin_suspeito"]
+    },
+    {
+      "codigo": "F-002",
+      "nome": "Viagem Impossível por GPS",
+      "descricao": "Detecta transações geograficamente impossíveis dado o tempo decorrido desde a última transação",
+      "ativo": true,
+      "peso_no_score_final": 0.30,
+      "parametros": {
+        "velocidade_maxima_humana_kmh": 1200,
+        "_nota_velocidade": "1200 km/h cobre voos comerciais supersônicos — qualquer valor acima é fisicamente impossível",
+        "distancia_minima_para_verificar_km": 500
+      },
+      "formula_velocidade": "distancia_km / (tempo_decorrido_minutos / 60)",
+      "sub_score_condicional": [
+        { "condicao": "velocidade_kmh > 1200", "sub_score": 0.97 },
+        { "condicao": "velocidade_kmh > 900 AND velocidade_kmh <= 1200", "sub_score": 0.80 },
+        { "condicao": "velocidade_kmh > 600 AND velocidade_kmh <= 900", "sub_score": 0.60 }
+      ],
+      "explicacao_template": "Transação em {cidade_nova} ({pais_novo}) a {distancia_km}km da última localização conhecida ({cidade_anterior}). Velocidade implícita: {velocidade_kmh} km/h — fisicamente impossível.",
+      "acoes_adicionais": ["solicitar_confirmacao_associado", "registrar_localizacao_suspeita"]
+    },
+    {
+      "codigo": "F-003",
+      "nome": "Transação Fora do Padrão do Associado",
+      "descricao": "Detecta valores ou categorias com desvio estatístico significativo em relação ao histórico do associado",
+      "ativo": true,
+      "peso_no_score_final": 0.25,
+      "parametros": {
+        "desvios_padrao_alerta": 3.0,
+        "desvios_padrao_bloqueio": 5.0,
+        "penalidade_categoria_nova": 0.25,
+        "_nota_categoria_nova": "Score adicional se categoria nunca foi usada pelo associado"
+      },
+      "sub_score_condicional": [
+        { "condicao": "desvios_padrao > 5 AND categoria_nova = true",  "sub_score": 0.95 },
+        { "condicao": "desvios_padrao > 5 AND categoria_nova = false", "sub_score": 0.80 },
+        { "condicao": "desvios_padrao > 3 AND categoria_nova = true",  "sub_score": 0.70 },
+        { "condicao": "desvios_padrao > 3 AND categoria_nova = false", "sub_score": 0.55 }
+      ],
+      "explicacao_template": "Valor R${valor} representa {desvios}σ acima do ticket médio histórico do associado (R${ticket_medio} ± R${desvio_padrao}). Categoria '{categoria}' {historico_categoria}.",
+      "acoes_adicionais": ["verificar_historico_completo", "checar_contexto_sazonal"]
+    },
+    {
+      "codigo": "F-004",
+      "nome": "Estabelecimento ou País em Lista Negra",
+      "descricao": "Verifica se o MCC, BIN, CNPJ do estabelecimento ou país da transação constam em listas de alto risco",
+      "ativo": true,
+      "peso_no_score_final": 0.10,
+      "listas_verificadas": [
+        "blacklist_mcc_alto_risco",
+        "blacklist_bins_comprometidos",
+        "paises_alto_risco_fraude",
+        "estabelecimentos_denunciados"
+      ],
+      "sub_score_condicional": [
+        { "condicao": "em_blacklist_critica = true", "sub_score": 1.0 },
+        { "condicao": "em_blacklist_moderada = true", "sub_score": 0.70 },
+        { "condicao": "pais_alto_risco = true", "sub_score": 0.50 }
+      ],
+      "paises_alto_risco_exemplos": ["NG", "UA_regioes_conflito", "KP", "IR"],
+      "mccs_alto_risco": ["7995", "5933", "6050", "6051"],
+      "explicacao_template": "Estabelecimento/país '{descricao}' consta em lista de alto risco de fraude (categoria: {tipo_lista}).",
+      "acoes_adicionais": ["bloquear_preventivamente", "notificar_compliance"]
+    },
+    {
+      "codigo": "F-005",
+      "nome": "Horário Atípico e Estabelecimento Incomum",
+      "descricao": "Penaliza transações realizadas em horários fora do padrão histórico do associado, combinadas com categoria não habitual",
+      "ativo": true,
+      "peso_no_score_final": 0.10,
+      "parametros": {
+        "janela_horario_atipico_inicio": "02:00",
+        "janela_horario_atipico_fim": "05:59",
+        "penalidade_horario_atipico": 0.20,
+        "penalidade_categoria_incomum_no_horario": 0.15
+      },
+      "sub_score_condicional": [
+        { "condicao": "horario_atipico = true AND categoria_incomum = true",  "sub_score": 0.65 },
+        { "condicao": "horario_atipico = true AND categoria_incomum = false", "sub_score": 0.40 },
+        { "condicao": "horario_atipico = false AND categoria_incomum = true", "sub_score": 0.25 }
+      ],
+      "explicacao_template": "Transação às {hora} ({dia_semana}) em categoria '{categoria}' — fora do padrão histórico de uso do associado (horário típico: {horario_usual}).",
+      "acoes_adicionais": ["registrar_para_analise_comportamental"]
+    }
+  ],
+
+  "categorias_mcc": {
+    "_descricao": "Mapeamento de categorias legíveis para códigos MCC",
+    "Supermercado": ["5411", "5412"],
+    "Restaurante": ["5812", "5813", "5814"],
+    "Posto de Combustível": ["5541", "5542"],
+    "Farmácia": ["5912"],
+    "Eletrônicos": ["5732", "5734", "5065"],
+    "Vestuário / Moda": ["5621", "5651", "5691"],
+    "Joalheria / Artigos de Luxo": ["5944", "5947"],
+    "Agropecuária": ["5261", "5083"],
+    "Material de Construção / Home Center": ["5211", "5251"],
+    "Educação / Ensino": ["8220", "8249"],
+    "Academia / Fitness": ["7941", "7997"],
+    "Streaming / Entretenimento Digital": ["7372", "7375"],
+    "E-commerce / Eletrônicos": ["5732", "5999"],
+    "Transferência Financeira": ["6012", "6051", "6011"],
+    "Livraria / Papelaria": ["5942", "5943"]
+  },
+
+  "formula_score_final": {
+    "_descricao": "Score final = soma ponderada dos sub-scores de cada regra ativada",
+    "formula": "score_final = Σ (sub_score_regra_i × peso_regra_i)",
+    "normalizacao": "score_final = min(1.0, score_final)",
+    "_nota": "Se nenhuma regra for ativada, score_final = 0.0 (aprovação automática)"
+  }
+}
