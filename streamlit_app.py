@@ -415,10 +415,11 @@ else:
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             assoc_id = st.text_input(
-                "ID do Associado",
-                value=_fill["associado_id"] if _fill else "assoc_demo",
-                placeholder="ex: assoc_001",
-            )
+            "ID do Associado",
+            value=_fill["associado_id"] if _fill else "demo_user",
+            placeholder="ex: assoc_001",
+          )
+
             categoria = st.selectbox(
                 "Categoria",
                 options=[
@@ -480,8 +481,8 @@ else:
     if submitted:
         tx = {
             "transacao_id": f"tx-{int(time.time()*1000)}",
-            "associado_id": assoc_id.strip() or "assoc_demo",
-            "valor":        valor,
+            "associado_id": assoc_id.strip() or "demo_user",
+            "valor": valor,
             "categoria":    categoria,
             "cidade":       cidade,
             "timestamp":    datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
