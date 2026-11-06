@@ -482,7 +482,7 @@ else:
         tx = {
             "transacao_id": f"tx-{int(time.time()*1000)}",
             "associado_id": assoc_id.strip() or "demo_user",
-            "valor": valor,
+            "valor":        valor,
             "categoria":    categoria,
             "cidade":       cidade,
             "timestamp":    datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
