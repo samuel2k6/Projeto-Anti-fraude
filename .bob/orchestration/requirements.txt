@@ -1,0 +1,11 @@
+# =============================================================================
+# orchestration/requirements.txt — Pacote de Orquestração
+# =============================================================================
+# O pacote `orchestration` importa diretamente mcp_antifraude/server.py,
+# que por sua vez depende do MCP SDK. Não há dependências adicionais.
+#
+# Instale a partir da raiz do projeto:
+#   pip install -r requirements.txt
+# =============================================================================
+
+mcp[cli]>=1.9.4,<2.0.0

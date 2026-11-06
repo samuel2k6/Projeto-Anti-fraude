@@ -1,0 +1,15 @@
+[project]
+name = "anti-fraude-mcp"
+version = "0.1.0"
+description = "Servidor MCP de análise de risco de transações financeiras"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.9.4,<2.0.0",
+]
+
+[project.scripts]
+anti-fraude-mcp = "server:mcp"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "anti-fraude-sicredi": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_server/server.py"],
+      "env": {}
+    },
+    "anti-fraude": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_antifraude/server.py"],
+      "env": {}
+    },
+    "historico-associado": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_historico_associado/server.py"],
+      "env": {}
+    },
+    "carding-detector": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_carding_detector/server.py"],
+      "env": {}
+    },
+    "lista-negra": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_lista_negra/server.py"],
+      "env": {}
+    },
+    "motor-decisao": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_motor_decisao/server.py"],
+      "env": {}
+    },
+    "notificacoes": {
+      "command": "python",
+      "args": ["${workspaceFolder}/mcp_notificacoes/server.py"],
+      "env": {}
+    }
+  }
+}
