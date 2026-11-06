@@ -326,7 +326,7 @@ with st.sidebar:
     }
 
     for label, tx in EXEMPLOS.items():
-    if st.button(label, use_container_width=True, key=f"btn_{label[:8]}"
+    if st.button(label, use_container_width=True, key=f"btn_{label[:8]}":
             # Para o caso GPS: injeta histórico de Porto Alegre antes
             if "Tóquio" in label:
             mcp_server._HISTORICO["demo_gps"] = [{
