@@ -286,75 +286,88 @@ def _processar_resposta_hitl(resposta: str, analise: dict, explicacao: dict) -> 
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+    # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🛡️ Agente Anti-Fraude")
     st.markdown("**IBM watsonx Orchestrate** · Sicredi")
     st.divider()
-
     st.markdown("#### 🧪 Transações de Teste")
     st.caption("Clique para preencher automaticamente")
-
+    
     EXEMPLOS = {
         "✅ Normal — Supermercado": {
-            "transacao_id": "demo-001", "associado_id": "demo_user",
-            "valor": 130.0, "categoria": "Supermercados",
+            "transacao_id": "demo-001",
+            "associado_id": "demo_user",
+            "valor": 130.0,
+            "categoria": "Supermercados",
             "cidade": "Porto Alegre",
             "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "latitude": -30.0346, "longitude": -51.2177,
+            "latitude": -30.0346,
+            "longitude": -51.2177,
         },
         "⚠️ Pico de valor — Eletrônicos": {
-            "transacao_id": "demo-002", "associado_id": "demo_user",
-            "valor": 4500.0, "categoria": "Eletrônicos",
+            "transacao_id": "demo-002",
+            "associado_id": "demo_user",
+            "valor": 4500.0,
+            "categoria": "Eletrônicos",
             "cidade": "São Paulo",
             "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "latitude": -23.5505, "longitude": -46.6333,
+            "latitude": -23.5505,
+            "longitude": -46.6333,
         },
         "🚨 GPS Impossível — Tóquio": {
-            "transacao_id": "demo-gps", "associado_id": "demo_gps",
-            "valor": 1250.0, "categoria": "Restaurante / Alimentação",
+            "transacao_id": "demo-gps",
+            "associado_id": "demo_gps",
+            "valor": 1250.0,
+            "categoria": "Restaurante / Alimentação",
             "cidade": "Tóquio",
             "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "latitude": 35.6762, "longitude": 139.6503,
+            "latitude": 35.6762,
+            "longitude": 139.6503,
         },
         "🚨 Joalheria de madrugada": {
-            "transacao_id": "demo-004", "associado_id": "demo_user",
-            "valor": 8900.0, "categoria": "Joalherias",
+            "transacao_id": "demo-004",
+            "associado_id": "demo_user",
+            "valor": 8900.0,
+            "categoria": "Joalherias",
             "cidade": "Rio de Janeiro",
             "timestamp": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%S"),
-            "latitude": -22.9068, "longitude": -43.1729,
+            "latitude": -22.9068,
+            "longitude": -43.1729,
         },
     }
 
     for label, tx in EXEMPLOS.items():
-    if st.button(label, use_container_width=True, key=f"btn_{label[:8]}":
+        if st.button(label, use_container_width=True, key=f"btn_{label[:8]}"):
             # Para o caso GPS: injeta histórico de Porto Alegre antes
             if "Tóquio" in label:
-            mcp_server._HISTORICO["demo_gps"] = [{
-                    "transacao_id": "hist-gps", "associado_id": "demo_gps",
-                    "valor": 187.0, "categoria": "Supermercados",
+                mcp_server._HISTORICO["demo_gps"] = [{
+                    "transacao_id": "hist-gps",
+                    "associado_id": "demo_gps",
+                    "valor": 187.0,
+                    "categoria": "Supermercados",
                     "timestamp": datetime.now().replace(
-                        hour=datetime.now().hour, minute=max(0, datetime.now().minute - 15)
+                        hour=datetime.now().hour,
+                        minute=max(0, datetime.now().minute - 15)
                     ).strftime("%Y-%m-%dT%H:%M:%S"),
-                    "latitude": -30.0346, "longitude": -51.2177,
+                    "latitude": -30.0346,
+                    "longitude": -51.2177,
                 }]
                 st.session_state.historico_mcp["demo_gps"] = mcp_server._HISTORICO["demo_gps"]
-
             st.session_state["_fill_tx"] = tx
-        st.rerun()
+            st.rerun()
 
     st.divider()
     st.markdown("#### ℹ️ Sobre")
-    st.caption(
-        "Simulação do agente anti-fraude Sicredi rodando localmente com "
-        "o motor MCP. As análises são executadas em memória — "
-        "sem chamadas externas."
-    )
+    st.caption("Simulação do agente anti-fraude Sicredi rodando localmente com o motor MCP. As análises são executadas em memória — sem chamadas externas.")
+    
     if st.button("🗑️ Limpar conversa", use_container_width=True):
-        st.session_state.messages       = []
-        st.session_state.historico_mcp  = {}
+        st.session_state.messages = []
+        st.session_state.historico_mcp = {}
         st.session_state.aguardando_resp = None
-        st.session_state.ultima_analise  = None
+        st.session_state.ultima_analise = None
         st.rerun()
+
 
 
 # ── Cabeçalho principal ───────────────────────────────────────────────────────
