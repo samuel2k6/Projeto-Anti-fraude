@@ -404,7 +404,7 @@ exemplo pronto na barra lateral. 👈
 st.divider()
 
 # Preenche campos se um exemplo foi selecionado
-_fill = st.session_state.pop("_fill_tx", None)
+_fill = st.session_state.get("_fill_tx", None)
 
 if st.session_state.aguardando_resp:
     st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
