@@ -14,7 +14,7 @@ sozinho. Em vez disso:
   3. Ao receber a resposta (ou ao atingir o timeout), resolve o fluxo:
        - SIM_FUI_EU   → libera a liquidação → APROVADA
        - NAO_BLOQUEAR → mantém bloqueio → BLOQUEADA + abre investigação
-       - TIMEOUT      → bloqueio automático por segurança
+       - TIMEOUT      → notifica o associado para contatar sua agência
 
 Este módulo usa ``asyncio`` para implementar o await real:
   - ``GestorHITL.aguardar_decisao()`` é uma coroutine que suspende com
@@ -51,7 +51,7 @@ log = logging.getLogger("hitl")
 class DecisaoHumana(str, Enum):
     LIBERADA      = "LIBERADA"       # associado confirmou — liquidação aprovada
     BLOQUEADA     = "BLOQUEADA"      # associado negou — cartão bloqueado
-    BLOQUEADA_TIMEOUT = "BLOQUEADA_TIMEOUT"  # timeout sem resposta
+    BLOQUEADA_TIMEOUT = "BLOQUEADA_TIMEOUT"  # timeout sem resposta → alerta agência
 
 
 class EstadoHITL(str, Enum):
@@ -170,7 +170,7 @@ class GestorHITL:
 
         except asyncio.TimeoutError:
             log.warning(
-                "[HITL] ⏱  TIMEOUT atingido  transacao=%s  — bloqueio automático",
+                "[HITL] ⏱  TIMEOUT atingido  transacao=%s  — associado deve contatar agência",
                 transacao_id,
             )
             botao   = BotaoResposta.TIMEOUT

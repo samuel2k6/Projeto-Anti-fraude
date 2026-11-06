@@ -266,8 +266,8 @@ erDiagram
 **Motivo:** Latência de leitura < 5 ms contra > 50 ms no banco relacional. TTL de 24 horas com invalidação via evento de nova transação.
 
 ### ADR-004: Timeout de 2 minutos para confirmação do associado
-**Decisão:** Se o associado não responder ao push/SMS em 2 minutos, escalar para analista e bloquear a transação.
-**Motivo:** Equilibrar experiência do usuário (não pode aguardar indefinidamente) com segurança (transação de alto risco não deve ficar pendente).
+**Decisão:** Se o associado não responder ao push/SMS em 2 minutos, enviar um alerta orientando o associado a entrar em contato com sua agência Sicredi — sem bloqueio automático.
+**Motivo:** Evitar bloqueios indevidos por falha de conectividade ou atraso na entrega da notificação, preservando a experiência do associado. A agência realiza a validação presencial e aciona os procedimentos cabíveis.
 
 ---
 

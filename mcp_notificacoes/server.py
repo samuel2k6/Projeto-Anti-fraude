@@ -29,6 +29,7 @@ mcp = FastMCP(
         "Thresholds alinhados ao mcp_antifraude: "
         "Para score 36–70 (ALTO): envie enviar_notificacao_associado, aguarde com aguardar_resposta_associado. "
         "Para score 71–100 (CRITICO): use abrir_caso_analista diretamente com prioridade ALTA ou CRITICA. "
+        "Em caso de timeout (sem resposta), NÃO bloqueie automaticamente — oriente o associado a entrar em contato com sua agência Sicredi. "
         "Sempre chamar registrar_feedback_associado após obter a resposta — alimenta o loop de aprendizado."
     ),
 )
@@ -73,7 +74,7 @@ def _mensagem_padrao(transacao: dict[str, Any]) -> str:
     return (
         f"Identificamos uma compra de R$ {valor:.2f} em {categoria} ({cidade}). "
         f"Foi você? Responda SIM para confirmar ou NÃO para bloquear. "
-        f"Sem resposta em 2 minutos, a transação será bloqueada automaticamente."
+        f"Sem resposta em 2 minutos, entre em contato com sua agência Sicredi."
     )
 
 
@@ -182,7 +183,7 @@ def aguardar_resposta_associado(
     else:
         resposta = "TIMEOUT"
         confirmou = None
-        acao = "BLOQUEAR"  # sem resposta → bloqueia por segurança (ADR-004)
+        acao = "ALERTAR_AGENCIA"  # sem resposta → orienta contato com a agência
 
     _RESPOSTAS[transacao_id] = {
         "transacao_id": transacao_id,
@@ -202,7 +203,7 @@ def aguardar_resposta_associado(
             "Associado confirmou a transação." if confirmou is True
             else "Associado negou a transação — bloqueio executado."
             if confirmou is False
-            else f"Timeout de {timeout_segundos}s atingido sem resposta — transação bloqueada por segurança."
+            else f"Timeout de {timeout_segundos}s atingido sem resposta — entre em contato com sua agência Sicredi."
         ),
     }, ensure_ascii=False, indent=2)
 

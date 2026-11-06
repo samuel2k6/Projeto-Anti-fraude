@@ -17,7 +17,7 @@ Comportamento configurado — Gestor de Fronteiras entre Humanos e IA:
        e. Ao receber a resposta (ou timeout de 120s), aplica a ação final:
             SIM_FUI_EU   → APROVADA (libera liquidação)
             NAO_BLOQUEAR → BLOQUEADA (mantém pausa + abre investigação)
-            TIMEOUT      → BLOQUEADA_TIMEOUT (bloqueio automático)
+            TIMEOUT      → BLOQUEADA_TIMEOUT (alerta ao associado para contato com agência)
 
 Classes principais:
   - LiquidacaoFinanceira : representa o fluxo de liquidação pausável
@@ -95,7 +95,7 @@ class ResultadoPipeline:
             DecisaoTransacao.APROVADA:             "✅ Aprovada automaticamente",
             DecisaoTransacao.APROVADA_PELO_HUMANO: "✅ Aprovada pelo associado",
             DecisaoTransacao.BLOQUEADA:            "🚫 Bloqueada pelo associado",
-            DecisaoTransacao.BLOQUEADA_TIMEOUT:    "⏱  Bloqueada por falta de resposta",
+            DecisaoTransacao.BLOQUEADA_TIMEOUT:    "⏱  Alerta de agência por falta de resposta",
             DecisaoTransacao.PENDENTE_REVISAO:     "⏳ Aguardando resposta do associado",
         }
         _label_liquidacao = {
@@ -477,11 +477,13 @@ class AgenteAntiFraude:
             liq      = StatusLiquidacao.PAUSADA
             log.warning("[AGENTE] 🚫 Bloqueado pelo associado  transacao=%s", transacao_id)
 
-        else:  # BLOQUEADA_TIMEOUT
-            self._liquidacao.bloquear(transacao_id, motivo="timeout sem resposta")
+        else:  # BLOQUEADA_TIMEOUT — sem resposta: alerta o associado, não bloqueia
             decisao  = DecisaoTransacao.BLOQUEADA_TIMEOUT
             liq      = StatusLiquidacao.PAUSADA
-            log.warning("[AGENTE] ⏱  Bloqueado por timeout  transacao=%s", transacao_id)
+            log.warning(
+                "[AGENTE] ⏱  Timeout sem resposta — associado alertado para contato com agência  transacao=%s",
+                transacao_id,
+            )
 
         resultado = ResultadoPipeline(
             transacao_id      = transacao_id,
