@@ -2,7 +2,7 @@
 ### AI Experiential Learning Lab | Trilha 4 — Prevenção Inteligente a Fraudes
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repositório-181717?logo=github&logoColor=white)](https://github.com/samuel2k6/Projeto-Anti-fraude)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Chat%20Demo-FF4B4B?logo=streamlit&logoColor=white)](https://samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Chat%20Demo-FF4B4B?logo=streamlit&logoColor=white)](https://projeto-anti-fraude-dbxqsevzzagoym2spwhrug.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-0f62fe)](https://modelcontextprotocol.io/)
 [![IBM watsonx](https://img.shields.io/badge/IBM-watsonx%20Orchestrate-1F70C1?logo=ibm&logoColor=white)](https://www.ibm.com/products/watsonx-orchestrate)
@@ -17,7 +17,7 @@
 
 | | Link |
 |---|---|
-| 💬 **Demo ao vivo (Streamlit)** | [samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app](https://samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app) |
+| 💬 **Demo ao vivo (Streamlit)** | [samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app](https://projeto-anti-fraude-dbxqsevzzagoym2spwhrug.streamlit.app/) |
 | 📦 **Repositório GitHub** | [github.com/samuel2k6/Projeto-Anti-fraude](https://github.com/samuel2k6/Projeto-Anti-fraude) |
 
 > **Como fazer o deploy da demo:** veja a seção [8. Instalação e Execução](#8-instalação-e-execução) abaixo, ou acesse o link do Streamlit Cloud diretamente acima.
