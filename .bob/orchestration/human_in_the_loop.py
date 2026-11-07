@@ -14,7 +14,7 @@ sozinho. Em vez disso:
   3. Ao receber a resposta (ou ao atingir o timeout), resolve o fluxo:
        - SIM_FUI_EU   → libera a liquidação → APROVADA
        - NAO_BLOQUEAR → mantém bloqueio → BLOQUEADA + abre investigação
-       - TIMEOUT      → notifica o associado para contatar sua agência
+       - TIMEOUT      → bloqueio automático por segurança
 
 Este módulo usa ``asyncio`` para implementar o await real:
   - ``GestorHITL.aguardar_decisao()`` é uma coroutine que suspende com
