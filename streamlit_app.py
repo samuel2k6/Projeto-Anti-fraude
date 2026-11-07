@@ -56,11 +56,11 @@ st.set_page_config(
 # ── CSS customizado (visual watsonx Orchestrate) ──────────────────────────────
 st.markdown("""
 <style>
-  /* Fundo geral */
-  .stApp { background-color: #f4f4f4; }
+/* Fundo geral */
+.stApp { background-color: #f4f4f4; }
 
-  /* Cabeçalho do chat */
-  .wx-header {
+/* Cabeçalho do chat */
+.wx-header {
     background: linear-gradient(135deg, #0f62fe 0%, #0043ce 100%);
     color: white;
     padding: 18px 24px;
@@ -69,87 +69,81 @@ st.markdown("""
     display: flex;
     align-items: center;
     gap: 12px;
-  }
-  .wx-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-  .wx-header p  { margin: 0; font-size: 0.82rem; opacity: 0.85; }
+}
+.wx-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+.wx-header p { margin: 0; font-size: 0.82rem; opacity: 0.85; }
 
-  /* Bolhas do chat */
-  .msg-user {
-    background: #0f62fe;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 18px 18px 4px 18px;
-    margin: 8px 0;
-    max-width: 75%;
-    margin-left: auto;
-    font-size: 0.93rem;
-    line-height: 1.5;
-  }
-  .msg-agent {
-    background: white;
-    color: #161616;
-    padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px;
-    margin: 8px 0;
-    max-width: 80%;
-    border: 1px solid #e0e0e0;
-    font-size: 0.93rem;
-    line-height: 1.55;
-  }
-  .msg-system {
-    background: #fff3cd;
-    color: #664d03;
-    padding: 10px 14px;
-    border-radius: 10px;
-    margin: 6px auto;
-    max-width: 70%;
-    text-align: center;
-    font-size: 0.82rem;
-    border: 1px solid #ffc107;
-  }
-  .msg-block {
-    background: #fff1f1;
-    color: #a2191f;
-    padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px;
-    margin: 8px 0;
-    max-width: 80%;
-    border: 1px solid #ffd7d9;
-    font-size: 0.93rem;
-    line-height: 1.55;
-  }
-  .msg-ok {
-    background: #defbe6;
-    color: #044317;
-    padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px;
-    margin: 8px 0;
-    max-width: 80%;
-    border: 1px solid #a7f0ba;
-    font-size: 0.93rem;
-    line-height: 1.55;
-  }
+/* Bolhas do chat */
+.msg-user {
+    background: #0f62fe; color: white; padding: 12px 16px;
+    border-radius: 18px 18px 4px 18px; margin: 8px 0;
+    max-width: 75%; margin-left: auto; font-size: 0.93rem; line-height: 1.5;
+}
+.msg-agent {
+    background: white; color: #161616; padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px; margin: 8px 0;
+    max-width: 80%; border: 1px solid #e0e0e0; font-size: 0.93rem; line-height: 1.55;
+}
+.msg-system {
+    background: #fff3cd; color: #664d03; padding: 10px 14px;
+    border-radius: 10px; margin: 6px auto; max-width: 70%;
+    text-align: center; font-size: 0.82rem; border: 1px solid #ffc107;
+}
+.msg-block {
+    background: #fff1f1; color: #a2191f; padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px; margin: 8px 0;
+    max-width: 80%; border: 1px solid #ffd7d9; font-size: 0.93rem; line-height: 1.55;
+}
+.msg-ok {
+    background: #defbe6; color: #044317; padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px; margin: 8px 0;
+    max-width: 80%; border: 1px solid #a7f0ba; font-size: 0.93rem; line-height: 1.55;
+}
 
-  /* Badge de score */
-  .badge-critico { background:#a2191f; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-  .badge-alto    { background:#ff832b; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-  .badge-medio   { background:#f1c21b; color:#161616; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-  .badge-baixo   { background:#24a148; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+/* Badge de score */
+.badge-critico { background:#a2191f; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+.badge-alto { background:#ff832b; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+.badge-medio { background:#f1c21b; color:#161616; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+.badge-baixo { background:#24a148; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
 
-  /* Rodapé IBM */
-  .ibm-footer {
-    text-align: center;
-    color: #6f6f6f;
-    font-size: 0.75rem;
-    margin-top: 32px;
-    padding-top: 12px;
-    border-top: 1px solid #e0e0e0;
-  }
+/* Rodapé IBM */
+.ibm-footer {
+    text-align: center; color: #6f6f6f; font-size: 0.75rem;
+    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e0e0e0;
+}
+.chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
 
-  /* Remove padding extra dos containers de chat */
-  .chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
+[data-testid="stWidgetLabel"] p {
+    color: #393939 !important;
+    font-weight: 500 !important;
+}
+
+/* Força as colunas do formulário a se manterem rigidamente na horizontal    */
+[data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+}
+
+/* Remove a largura mínima padrão que empurrava as caixas para baixo        */
+[data-testid="stHorizontalBlock"] > div {
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+}
+
+/* Ajustes finos nos rótulos das colunas horizontais                        */
+[data-testid="stHorizontalBlock"] label p {
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 </style>
 """, unsafe_allow_html=True)
+
+
 
 
 # ── Estado da sessão ──────────────────────────────────────────────────────────
