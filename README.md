@@ -18,7 +18,6 @@
 | | Link |
 |---|---|
 | 💬 **Demo ao vivo (Streamlit)** | [samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app](https://projeto-anti-fraude-dbxqsevzzagoym2spwhrug.streamlit.app/) |
-| 📦 **Repositório GitHub** | [github.com/samuel2k6/Projeto-Anti-fraude](https://github.com/samuel2k6/Projeto-Anti-fraude) |
 
 > **Como fazer o deploy da demo:** veja a seção [8. Instalação e Execução](#8-instalação-e-execução) abaixo, ou acesse o link do Streamlit Cloud diretamente acima.
 
