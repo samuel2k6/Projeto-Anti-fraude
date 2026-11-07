@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 streamlit_app.py — Simulador de Chat do watsonx Orchestrate
 =============================================================
@@ -54,11 +54,13 @@ st.set_page_config(
 )
 
 # ── CSS customizado (visual watsonx Orchestrate) ──────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* Fundo geral */
-.stApp { background-color: #f4f4f4; }
-
+.stApp {
+    background-color: #f4f4f4;
+}
 /* Cabeçalho do chat */
 .wx-header {
     background: linear-gradient(135deg, #0f62fe 0%, #0043ce 100%);
@@ -70,34 +72,64 @@ st.markdown("""
     align-items: center;
     gap: 12px;
 }
-.wx-header h2 {margin: 0; font-size: 1.25rem; font-weight: 600; }
+.wx-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
 .wx-header p { margin: 0; font-size: 0.82rem; opacity: 0.85; }
 
 /* Bolhas do chat */
 .msg-user {
-    background: #0f62fe; color: white; padding: 12px 16px;
-    border-radius: 18px 18px 4px 18px; margin: 8px 0;
-    max-width: 75%; margin-left: auto; font-size: 0.93rem; line-height: 1.5;
+    background: #0f62fe;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 18px 18px 4px 18px;
+    margin: 8px 0;
+    max-width: 75%;
+    margin-left: auto;
+    font-size: 0.93rem;
+    line-height: 1.5;
 }
 .msg-agent {
-    background: white; color: #161616; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #e0e0e0; font-size: 0.93rem; line-height: 1.55;
+    background: white;
+    color: #161616;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #e0e0e0;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 .msg-system {
-    background: #fff3cd; color: #664d03; padding: 10px 14px;
-    border-radius: 10px; margin: 6px auto; max-width: 70%;
-    text-align: center; font-size: 0.82rem; border: 1px solid #ffc107;
+    background: #fff3cd;
+    color: #664d03;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin: 6px auto;
+    max-width: 70%;
+    text-align: center;
+    font-size: 0.82rem;
+    border: 1px solid #ffc107;
 }
 .msg-block {
-    background: #fff1f1; color: #a2191f; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #ffd7d9; font-size: 0.93rem; line-height: 1.55;
+    background: #fff1f1;
+    color: #a2191f;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #ffd7d9;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 .msg-ok {
-    background: #defbe6; color: #044317; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #a7f0ba; font-size: 0.93rem; line-height: 1.55;
+    background: #defbe6;
+    color: #044317;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #a7f0ba;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 
 /* Badge de score */
@@ -108,16 +140,22 @@ st.markdown("""
 
 /* Rodapé IBM */
 .ibm-footer {
-    text-align: center; color: #6f6f6f; font-size: 0.75rem;
-    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e0e0e0;
+    text-align: center;
+    color: #6f6f6f;
+    font-size: 0.75rem;
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
 }
-.chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
-
+.chat-area {
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
 [data-testid="stWidgetLabel"] p {
     color: #393939 !important;
     font-weight: 500 !important;
 }
-
 div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"],
 div.lat-lon-row [data-testid="stHorizontalBlock"] {
     display: flex !important;
@@ -126,13 +164,11 @@ div.lat-lon-row [data-testid="stHorizontalBlock"] {
     align-items: stretch !important;
     gap: 0.75rem !important;
 }
-
 div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"] > div,
 div.lat-lon-row [data-testid="stHorizontalBlock"] > div {
     min-width: 0 !important;
     flex: 1 1 0% !important;
 }
-
 div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) label p,
 div.lat-lon-row label p {
     font-size: 0.85rem !important;
@@ -140,9 +176,10 @@ div.lat-lon-row label p {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 
@@ -393,9 +430,29 @@ exemplo pronto na barra lateral. 👈
         for msg in st.session_state.messages:
             _render_msg(msg)
 
-
 # ── Formulário de entrada de transação ────────────────────────────────────────
 st.divider()
+_fill = st.session_state.get("_fill_tx", None)
+
+if st.session_state.aguardando_resp:
+    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
+            _add_msg("user", "✅ Sim, fui eu — pode liberar")
+            _processar_resposta_hitl("SIM", st.session_state.ultima_analise, st.session_state.ultima_analise)
+            st.rerun()
+    with col2:
+        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
+            _add_msg("user", "🚫 Não fui eu — bloquear cartão")
+            _processar_resposta_hitl("NÃO", st.session_state.ultima_analise, st.session_state.ultima_analise)
+            st.rerun()
+
+else:
+    with st.form("form_transacao", clear_on_submit=False):
+        st.markdown("**📋 Dados da Transação**")
+        col1, col2 = st.columns(2)
+
 
 # Preenche campos se um exemplo foi selecionado
 _fill = st.session_state.get("_fill_tx", None)
