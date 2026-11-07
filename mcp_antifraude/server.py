@@ -123,55 +123,13 @@ CATEGORIAS_ALTO_RISCO = {
 HORA_NORMAL_INICIO = time(6, 0)
 HORA_NORMAL_FIM = time(22, 0)
 
-# GPS — limiares de velocidade (km/h)
-# > 600 km/h: fisicamente impossível por via terrestre/aérea doméstica
-# > 200 km/h: improvável para deslocamento inter-estadual em < 2h (suspeito)
-# > 80  km/h: detecta mudança de estado em janela curta (alerta leve)
-VELOCIDADE_CRITICA_KMH  = 600.0   # certeza de fraude
-VELOCIDADE_SUSPEITA_KMH = 200.0   # muito improvável
-VELOCIDADE_ALERTA_KMH   =  80.0   # mudança de estado suspeita
-
-# Janela de tempo máxima para checar coerência geográfica (minutos)
-INTERVALO_MINUTOS = 120   # ampliado de 30 → 120 para capturar inter-estados
-
-# Distância mínima entre capitais de estados vizinhos (km) — anomalia inter-estadual
-DISTANCIA_INTER_ESTADOS_KM = 100.0
+# Raio máximo percorrível em 30 minutos a qualquer meio convencional (km)
+# Avião comercial ~900 km/h → 30 min ≈ 450 km; usamos 300 km como limiar prático
+VELOCIDADE_IMPOSSIVEL_KM = 300.0
+INTERVALO_MINUTOS = 30
 
 # Multiplicador para "Pico de Transação"
 MULTIPLICADOR_PICO = 3.0
-
-# ---------------------------------------------------------------------------
-# Tabela de estados brasileiros: sigla → (nome, lat_centro, lon_centro)
-# ---------------------------------------------------------------------------
-ESTADOS_BR: dict[str, tuple[str, float, float]] = {
-    "AC": ("Acre",               -9.0238,  -70.8120),
-    "AL": ("Alagoas",            -9.5713,  -36.7819),
-    "AM": ("Amazonas",           -4.4197,  -63.5806),
-    "AP": ("Amapá",               1.4102,  -51.7700),
-    "BA": ("Bahia",             -12.5797,  -41.7007),
-    "CE": ("Ceará",              -5.4984,  -39.3206),
-    "DF": ("Distrito Federal",  -15.7801,  -47.9292),
-    "ES": ("Espírito Santo",    -19.1834,  -40.3089),
-    "GO": ("Goiás",             -15.8270,  -49.8362),
-    "MA": ("Maranhão",          -5.4200,   -45.4410),
-    "MG": ("Minas Gerais",      -18.5122,  -44.5550),
-    "MS": ("Mato Grosso do Sul",-20.7722,  -54.7852),
-    "MT": ("Mato Grosso",       -12.6819,  -56.9211),
-    "PA": ("Pará",               -3.4168,  -52.0000),
-    "PB": ("Paraíba",            -7.2399,  -36.7819),
-    "PE": ("Pernambuco",         -8.8137,  -36.9541),
-    "PI": ("Piauí",              -7.7183,  -42.7289),
-    "PR": ("Paraná",            -24.8950,  -51.5490),
-    "RJ": ("Rio de Janeiro",    -22.9068,  -43.1729),
-    "RN": ("Rio Grande do Norte",-5.8127,  -36.2031),
-    "RO": ("Rondônia",          -10.8380,  -63.3430),
-    "RR": ("Roraima",             2.7376,  -62.0751),
-    "RS": ("Rio Grande do Sul", -30.0346,  -51.2177),
-    "SC": ("Santa Catarina",    -27.4500,  -50.9500),
-    "SE": ("Sergipe",           -10.5741,  -37.3857),
-    "SP": ("São Paulo",         -23.5505,  -46.6333),
-    "TO": ("Tocantins",         -10.1753,  -48.2982),
-}
 
 
 # ---------------------------------------------------------------------------
@@ -200,48 +158,20 @@ def _parse_ts(ts: str) -> datetime:
 # Regras heurísticas
 # ---------------------------------------------------------------------------
 
-def _estado_da_coordenada(lat: float, lon: float) -> str | None:
-    """
-    Retorna a sigla do estado cujo centróide está mais próximo das coordenadas
-    fornecidas.  Usado como proxy rápido (sem polígonos) para detectar em qual
-    estado a transação ocorreu.
-    """
-    melhor_sigla, melhor_dist = None, float("inf")
-    for sigla, (_, clat, clon) in ESTADOS_BR.items():
-        d = _haversine(lat, lon, clat, clon)
-        if d < melhor_dist:
-            melhor_dist = d
-            melhor_sigla = sigla
-    return melhor_sigla
-
-
 def _regra_velocidade_impossivel(
     transacao: dict[str, Any],
     historico: list[dict[str, Any]],
 ) -> tuple[bool, str]:
     """
-    Regra 1 — Coerência Geográfica (GPS Aprimorado)
-
-    Compara a localização da transação atual com cada transação anterior dentro
-    da janela INTERVALO_MINUTOS e classifica a anomalia em três níveis:
-
-    Nível CRÍTICO  (score += 45): velocidade implícita > 600 km/h — fisicamente
-        impossível para qualquer meio de transporte convencional.
-
-    Nível SUSPEITO (score += 35): velocidade > 200 km/h OU mudança de estado
-        em < 60 min com distância > 100 km — muito improvável por via terrestre.
-
-    Nível ALERTA   (score += 20): velocidade > 80 km/h OU mudança de estado
-        em < 30 min — padrão incomum que merece atenção.
-
-    Retorna o pior caso encontrado (maior score) dentro da janela de tempo.
+    Regra 1 — Velocidade Impossível (GPS)
+    Verifica se existe alguma transação anterior cujo intervalo de tempo em
+    relação à transação atual é ≤ INTERVALO_MINUTOS e a distância geográfica
+    é maior do que o possível nesse intervalo.
     """
     lat_atual = transacao.get("latitude")
     lon_atual = transacao.get("longitude")
-    estado_atual = transacao.get("estado") or _estado_da_coordenada(lat_atual, lon_atual) if (
-        lat_atual is not None and lon_atual is not None
-    ) else None
 
+    # Ignora silenciosamente se latitude/longitude ausentes ou de tipo inválido
     if lat_atual is None or lon_atual is None:
         return False, ""
     if not isinstance(lat_atual, (int, float)) or not isinstance(lon_atual, (int, float)):
@@ -252,10 +182,6 @@ def _regra_velocidade_impossivel(
     except (ValueError, TypeError):
         return False, ""
 
-    # Guarda o pior caso encontrado
-    pior_score = 0
-    pior_detalhe = ""
-
     for tx in historico:
         if "latitude" not in tx or "longitude" not in tx:
             continue
@@ -263,77 +189,18 @@ def _regra_velocidade_impossivel(
             ts_ant = _parse_ts(tx["timestamp"])
         except (ValueError, TypeError):
             continue
-
         diff_min = abs((ts_atual - ts_ant).total_seconds()) / 60.0
         if diff_min > INTERVALO_MINUTOS:
             continue
-
         dist_km = _haversine(lat_atual, lon_atual, tx["latitude"], tx["longitude"])
+        # Velocidade média necessária (km/h)
         velocidade = dist_km / (diff_min / 60.0) if diff_min > 0 else float("inf")
-
-        estado_ant = tx.get("estado") or _estado_da_coordenada(tx["latitude"], tx["longitude"])
-        mudou_estado = (estado_atual and estado_ant and estado_atual != estado_ant)
-
-        # ── Classificação por gravidade ────────────────────────────────────
-        if velocidade > VELOCIDADE_CRITICA_KMH:
-            # Fisicamente impossível
-            nivel_score = 45
-            nivel_txt = "fisicamente impossível"
-            cidade_ant = tx.get("cidade", estado_ant or "local anterior")
-            cidade_now = transacao.get("cidade", estado_atual or "local atual")
+        if velocidade > VELOCIDADE_IMPOSSIVEL_KM * 2:  # > 600 km/h → inviável
             detalhe = (
-                f"Distância de {dist_km:.1f} km em {diff_min:.0f} min "
-                f"({velocidade:.0f} km/h) — {nivel_txt}. "
-                f"Último uso: {cidade_ant}"
-                + (f" ({estado_ant})" if estado_ant else "")
-                + f" → atual: {cidade_now}"
-                + (f" ({estado_atual})" if estado_atual else "")
-                + f" [ref: {tx['transacao_id']}]"
+                f"Distância de {dist_km:.1f} km em {diff_min:.1f} min "
+                f"({velocidade:.0f} km/h) em relação à transação {tx['transacao_id']}"
             )
-
-        elif velocidade > VELOCIDADE_SUSPEITA_KMH or (
-            mudou_estado and diff_min < 60 and dist_km > DISTANCIA_INTER_ESTADOS_KM
-        ):
-            # Muito improvável por via terrestre
-            nivel_score = 35
-            nivel_txt = "muito improvável por via terrestre"
-            cidade_ant = tx.get("cidade", estado_ant or "local anterior")
-            cidade_now = transacao.get("cidade", estado_atual or "local atual")
-            detalhe = (
-                f"Distância de {dist_km:.1f} km em {diff_min:.0f} min "
-                f"({velocidade:.0f} km/h) entre {cidade_ant}"
-                + (f" ({estado_ant})" if estado_ant else "")
-                + f" e {cidade_now}"
-                + (f" ({estado_atual})" if estado_atual else "")
-                + f" — {nivel_txt} [ref: {tx['transacao_id']}]"
-            )
-
-        elif velocidade > VELOCIDADE_ALERTA_KMH or (
-            mudou_estado and diff_min < 30
-        ):
-            # Padrão incomum — mudança de estado em tempo curto
-            nivel_score = 20
-            cidade_ant = tx.get("cidade", estado_ant or "local anterior")
-            cidade_now = transacao.get("cidade", estado_atual or "local atual")
-            motivo = (
-                f"mudança de {estado_ant} para {estado_atual} em {diff_min:.0f} min"
-                if mudou_estado
-                else f"{velocidade:.0f} km/h entre localidades"
-            )
-            detalhe = (
-                f"Distância de {dist_km:.1f} km em {diff_min:.0f} min — {motivo}. "
-                f"{cidade_ant} → {cidade_now} [ref: {tx['transacao_id']}]"
-            )
-
-        else:
-            continue
-
-        if nivel_score > pior_score:
-            pior_score = nivel_score
-            pior_detalhe = detalhe
-
-    if pior_score > 0:
-        return True, pior_detalhe
+            return True, detalhe
 
     return False, ""
 
@@ -477,20 +344,14 @@ def analisar_risco_transacao(transacao_json: str) -> str:
 
     ok, detalhe = _regra_velocidade_impossivel(transacao, historico)
     if ok:
-        # Score é proporcional ao nível detectado: extraímos da função via detalhe
-        _score_gps = (
-            45 if "fisicamente impossível" in detalhe
-            else 35 if "muito improvável" in detalhe
-            else 20
-        )
         regras_violadas.append(
             {
                 "regra": "VELOCIDADE_IMPOSSIVEL",
-                "descricao": "Compra registrada em localização geograficamente incompatível com o histórico recente",
+                "descricao": "Compra registrada em um lugar muito distante do uso anterior, em tempo curto demais para ser possível",
                 "detalhe": detalhe,
             }
         )
-        score += _score_gps
+        score += 45
 
     ok, detalhe = _regra_pico_transacao(transacao, historico)
     if ok:
@@ -844,7 +705,7 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
     orientacao = (
         "Responda SIM para confirmar que foi você e liberar a compra. "
         "Responda NÃO para bloquear e acionar nossa equipe de segurança. "
-        "Se não responder em 2 minutos, entre em contato com sua agência Sicredi."
+        "Se não responder em 2 minutos, a compra será bloqueada automaticamente por segurança."
     )
 
     return json.dumps({

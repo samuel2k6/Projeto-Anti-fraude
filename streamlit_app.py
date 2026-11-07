@@ -42,16 +42,6 @@ import server as mcp_server  # type: ignore  (mcp_antifraude/server.py)
 analisar_risco_transacao = mcp_server.analisar_risco_transacao
 explicar_risco_fraude    = mcp_server.explicar_risco_fraude
 
-# Reutiliza a tabela de estados do motor MCP (lat/lon já calibrados)
-# Formato: sigla → (nome completo, lat_centro, lon_centro)
-ESTADOS_BR = mcp_server.ESTADOS_BR
-
-# Lista ordenada para o seletor: "SP — São Paulo", …
-_OPCOES_ESTADO = sorted(
-    [f"{sig} — {nome}" for sig, (nome, _, _) in ESTADOS_BR.items()]
-)
-_SIGLA_DE_OPCAO = {f"{sig} — {nome}": sig for sig, (nome, _, _) in ESTADOS_BR.items()}
-
 # ── Streamlit ─────────────────────────────────────────────────────────────────
 import streamlit as st
 
@@ -303,189 +293,67 @@ with st.sidebar:
     st.divider()
     st.markdown("#### 🧪 Transações de Teste")
     st.caption("Clique para preencher automaticamente")
+    
+    EXEMPLOS = {
+        "✅ Normal — Supermercado": {
+            "transacao_id": "demo-001",
+            "associado_id": "demo_user",
+            "valor": 130.0,
+            "categoria": "Supermercados",
+            "cidade": "Porto Alegre",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": -30.0346,
+            "longitude": -51.2177,
+        },
+        "⚠️ Pico de valor — Eletrônicos": {
+            "transacao_id": "demo-002",
+            "associado_id": "demo_user",
+            "valor": 4500.0,
+            "categoria": "Eletrônicos",
+            "cidade": "São Paulo",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": -23.5505,
+            "longitude": -46.6333,
+        },
+        "🚨 GPS Impossível — Tóquio": {
+            "transacao_id": "demo-gps",
+            "associado_id": "demo_gps",
+            "valor": 1250.0,
+            "categoria": "Restaurante / Alimentação",
+            "cidade": "Tóquio",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": 35.6762,
+            "longitude": 139.6503,
+        },
+        "🚨 Joalheria de madrugada": {
+            "transacao_id": "demo-004",
+            "associado_id": "demo_user",
+            "valor": 8900.0,
+            "categoria": "Joalherias",
+            "cidade": "Rio de Janeiro",
+            "timestamp": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": -22.9068,
+            "longitude": -43.1729,
+        },
+    }
 
-    # Cada entrada: (label, tx_dict, historico_para_injetar_ou_None)
-    # Históricos definem o padrão do associado antes da transação suspeita.
-    _now = datetime.now()
-    from datetime import timedelta as _td
-
-    EXEMPLOS = [
-        # ── Casos SEM fraude ────────────────────────────────────────────────
-        (
-            "✅ Normal — Farmácia R$87,43",
-            {
-                "transacao_id": "demo-n0", "associado_id": "demo_n0",
-                "valor": 87.43, "categoria": "Farmácias",
-                "cidade": "Curitiba", "estado": "PR",
-                "timestamp": _now.replace(hour=10, minute=17).strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -25.4297, "longitude": -49.2716,
-            },
-            None,  # sem histórico → score 0, BAIXO
-        ),
-        (
-            "✅ Normal — Supermercado no padrão",
-            {
-                "transacao_id": "demo-n1", "associado_id": "demo_n1",
-                "valor": 231.67, "categoria": "Supermercados",
-                "cidade": "Porto Alegre", "estado": "RS",
-                "timestamp": _now.replace(hour=11, minute=43).strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -30.0346, "longitude": -51.2177,
-            },
-            # histórico: 3 compras no mesmo estado/cidade, média ~R$196
-            [
-                {"transacao_id": "hn1a", "associado_id": "demo_n1", "valor": 213.57,
-                 "categoria": "Supermercados", "cidade": "Porto Alegre", "estado": "RS",
-                 "timestamp": (_now - _td(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -30.0346, "longitude": -51.2177},
-                {"transacao_id": "hn1b", "associado_id": "demo_n1", "valor": 178.29,
-                 "categoria": "Supermercados", "cidade": "Porto Alegre", "estado": "RS",
-                 "timestamp": (_now - _td(days=5)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -30.0346, "longitude": -51.2177},
-                {"transacao_id": "hn1c", "associado_id": "demo_n1", "valor": 196.84,
-                 "categoria": "Supermercados", "cidade": "Porto Alegre", "estado": "RS",
-                 "timestamp": (_now - _td(days=8)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -30.0346, "longitude": -51.2177},
-            ],
-        ),
-        # ── Casos COM alerta inter-estadual (novo) ──────────────────────────
-        (
-            "⚠️ PR → SP em 60 min — inter-estadual suspeito",
-            {
-                "transacao_id": "demo-g1", "associado_id": "demo_g1",
-                "valor": 318.47, "categoria": "Eletrônicos",
-                "cidade": "São Paulo", "estado": "SP",
-                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -23.5505, "longitude": -46.6333,
-            },
-            # PR→SP ≈ 341 km em 60 min → 341 km/h — improvável por via terrestre (SUSPEITO)
-            [
-                {"transacao_id": "hg1a", "associado_id": "demo_g1", "valor": 214.93,
-                 "categoria": "Supermercados", "cidade": "Curitiba", "estado": "PR",
-                 "timestamp": (_now - _td(minutes=60)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -25.4297, "longitude": -49.2716},
-            ],
-        ),
-        (
-            "⚠️ MG → RJ em 90 min — mudança inter-estadual",
-            {
-                "transacao_id": "demo-g2", "associado_id": "demo_g2",
-                "valor": 476.19, "categoria": "Restaurantes",
-                "cidade": "Rio de Janeiro", "estado": "RJ",
-                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -22.9068, "longitude": -43.1729,
-            },
-            # MG→RJ ≈ 341 km em 90 min → 228 km/h — suspeito por via terrestre
-            [
-                {"transacao_id": "hg2a", "associado_id": "demo_g2", "valor": 312.84,
-                 "categoria": "Supermercados", "cidade": "Belo Horizonte", "estado": "MG",
-                 "timestamp": (_now - _td(minutes=90)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -19.9167, "longitude": -43.9345},
-            ],
-        ),
-        # ── Casos COM fraude: alerta (score 1–70) ──────────────────────────
-        (
-            "⚠️ Pico — Eletrônicos 4.6x acima",
-            {
-                "transacao_id": "demo-a1", "associado_id": "demo_a1",
-                "valor": 1847.63, "categoria": "Eletrônicos",
-                "cidade": "Fortaleza", "estado": "CE",
-                "timestamp": _now.replace(hour=16, minute=54).strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -3.7172, "longitude": -38.5433,
-            },
-            # histórico: 2 compras de eletrônicos no CE, média ~R$405
-            [
-                {"transacao_id": "ha1a", "associado_id": "demo_a1", "valor": 423.18,
-                 "categoria": "Eletrônicos", "cidade": "Fortaleza", "estado": "CE",
-                 "timestamp": (_now - _td(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -3.7172, "longitude": -38.5433},
-                {"transacao_id": "ha1b", "associado_id": "demo_a1", "valor": 387.55,
-                 "categoria": "Eletrônicos", "cidade": "Fortaleza", "estado": "CE",
-                 "timestamp": (_now - _td(days=5)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -3.7172, "longitude": -38.5433},
-            ],
-        ),
-        (
-            "⚠️ Joalheria às 03h17 — perfil incomum",
-            {
-                "transacao_id": "demo-a2", "associado_id": "demo_a2",
-                "valor": 7312.49, "categoria": "Joalherias",
-                "cidade": "Rio de Janeiro", "estado": "RJ",
-                "timestamp": _now.replace(hour=3, minute=17).strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -22.9068, "longitude": -43.1729,
-            },
-            None,  # sem histórico → só PERFIL_INCOMUM, score 25, MÉDIO
-        ),
-        (
-            "🔴 Cassino 04h38 — pico + perfil (ALTO)",
-            {
-                "transacao_id": "demo-a3", "associado_id": "demo_a3",
-                "valor": 4256.17, "categoria": "Cassinos",
-                "cidade": "Belo Horizonte", "estado": "MG",
-                "timestamp": _now.replace(hour=4, minute=38).strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -19.9167, "longitude": -43.9345,
-            },
-            # histórico: 2 compras pequenas no MG, média ~R$145 → valor 4256 = 29x acima
-            [
-                {"transacao_id": "hca1", "associado_id": "demo_a3", "valor": 156.38,
-                 "categoria": "Restaurantes", "cidade": "Belo Horizonte", "estado": "MG",
-                 "timestamp": (_now - _td(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -19.9167, "longitude": -43.9345},
-                {"transacao_id": "hca2", "associado_id": "demo_a3", "valor": 134.71,
-                 "categoria": "Supermercados", "cidade": "Belo Horizonte", "estado": "MG",
-                 "timestamp": (_now - _td(days=3)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -19.9167, "longitude": -43.9345},
-            ],
-        ),
-        # ── Casos COM fraude: CRÍTICO (score > 70) — aciona HITL ───────────
-        (
-            "🚨 GPS Impossível — RS → Tóquio (CRÍTICO)",
-            {
-                "transacao_id": "demo-f1", "associado_id": "demo_f1",
-                "valor": 1247.83, "categoria": "Restaurante / Alimentação",
-                "cidade": "Tóquio", "estado": "RS",  # estado RS para o seletor
-                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": 35.6762, "longitude": 139.6503,
-            },
-            # histórico: 1 compra em Porto Alegre (RS) há 12 min → 18.822 km = 94.115 km/h
-            [
-                {"transacao_id": "hf1a", "associado_id": "demo_f1", "valor": 143.78,
-                 "categoria": "Supermercados", "cidade": "Porto Alegre", "estado": "RS",
-                 "timestamp": (_now - _td(minutes=12)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -30.0346, "longitude": -51.2177},
-            ],
-        ),
-        (
-            "🚨 GPS — DF → Buenos Aires (CRÍTICO)",
-            {
-                "transacao_id": "demo-f2", "associado_id": "demo_f2",
-                "valor": 1893.54, "categoria": "Artigos de Luxo",
-                "cidade": "Buenos Aires", "estado": "DF",
-                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": -34.6037, "longitude": -58.3816,
-            },
-            # histórico: 1 compra em Brasília (DF) há 8 min → 2.338 km = 17.541 km/h
-            [
-                {"transacao_id": "hf2a", "associado_id": "demo_f2", "valor": 198.37,
-                 "categoria": "Supermercados", "cidade": "Brasília", "estado": "DF",
-                 "timestamp": (_now - _td(minutes=8)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -15.7801, "longitude": -47.9292},
-                {"transacao_id": "hf2b", "associado_id": "demo_f2", "valor": 217.64,
-                 "categoria": "Restaurantes", "cidade": "Brasília", "estado": "DF",
-                 "timestamp": (_now - _td(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
-                 "latitude": -15.7805, "longitude": -47.9285},
-            ],
-        ),
-    ]
-
-    for label, tx, hist_injectar in EXEMPLOS:
-        if st.button(label, use_container_width=True, key=f"btn_{label[:12]}"):
-            assoc = tx["associado_id"]
-            if hist_injectar is not None:
-                mcp_server._HISTORICO[assoc] = hist_injectar
-                st.session_state.historico_mcp[assoc] = hist_injectar
-            else:
-                mcp_server._HISTORICO.pop(assoc, None)
-                st.session_state.historico_mcp.pop(assoc, None)
+    for label, tx in EXEMPLOS.items():
+        if st.button(label, use_container_width=True, key=f"btn_{label[:8]}"):
+            # Para o caso GPS: injeta histórico de Porto Alegre antes
+            if "Tóquio" in label:
+                mcp_server._HISTORICO["demo_gps"] = [{
+                    "transacao_id": "hist-gps",
+                    "associado_id": "demo_gps",
+                    "valor": 187.0,
+                    "categoria": "Supermercados",
+                    "timestamp": datetime.now().replace(
+                        hour=datetime.now().hour,
+                        minute=max(0, datetime.now().minute - 15)
+                    ).strftime("%Y-%m-%dT%H:%M:%S"),
+                    "latitude": -30.0346,
+                    "longitude": -51.2177,
+                }]
+                st.session_state.historico_mcp["demo_gps"] = mcp_server._HISTORICO["demo_gps"]
             st.session_state["_fill_tx"] = tx
             st.rerun()
 
@@ -560,87 +428,64 @@ else:
     with st.form("form_transacao", clear_on_submit=False):
         st.markdown("**📋 Dados da Transação**")
 
-        # ── Linha 1: Associado | Categoria | Valor ────────────────────────
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             assoc_id = st.text_input(
-                "ID do Associado",
-                value=_fill["associado_id"] if _fill else "demo_user",
-                placeholder="ex: assoc_001",
-            )
+            "ID do Associado",
+            value=_fill["associado_id"] if _fill else "demo_user",
+            placeholder="ex: assoc_001",
+          )
 
-        _cats = [
-            "Supermercados", "Restaurantes", "Farmácias",
-            "Postos de Combustível", "Eletrônicos", "Joalherias",
-            "Artigos de Luxo", "Casas de Câmbio", "Cassinos", "Apostas",
-            "Restaurante / Alimentação", "Transferência Financeira",
-            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-            "Streaming / Entretenimento Digital", "Outros",
-        ]
-        with col2:
             categoria = st.selectbox(
                 "Categoria",
-                options=_cats,
-                index=(
-                    _cats.index(_fill["categoria"])
-                    if _fill and _fill.get("categoria") in _cats
+                options=[
+                    "Supermercados", "Restaurantes", "Farmácias",
+                    "Postos de Combustível", "Eletrônicos", "Joalherias",
+                    "Artigos de Luxo", "Casas de Câmbio", "Cassinos", "Apostas",
+                    "Restaurante / Alimentação", "Transferência Financeira",
+                    "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+                    "Streaming / Entretenimento Digital", "Outros",
+                ],
+                index=0 if not _fill else (
+                    ["Supermercados","Restaurantes","Farmácias","Postos de Combustível",
+                     "Eletrônicos","Joalherias","Artigos de Luxo","Casas de Câmbio",
+                     "Cassinos","Apostas","Restaurante / Alimentação",
+                     "Transferência Financeira","E-commerce / Eletrônicos",
+                     "Vestuário / Moda","Educação / Ensino",
+                     "Streaming / Entretenimento Digital","Outros",
+                    ].index(_fill["categoria"])
+                    if _fill["categoria"] in ["Supermercados","Restaurantes","Farmácias",
+                     "Postos de Combustível","Eletrônicos","Joalherias","Artigos de Luxo",
+                     "Casas de Câmbio","Cassinos","Apostas","Restaurante / Alimentação",
+                     "Transferência Financeira","E-commerce / Eletrônicos","Vestuário / Moda",
+                     "Educação / Ensino","Streaming / Entretenimento Digital","Outros"]
                     else 0
                 ),
             )
 
-        with col3:
+        with col2:
             valor = st.number_input(
                 "Valor (R$)",
                 min_value=0.01, max_value=999999.99, step=10.0,
                 value=float(_fill["valor"]) if _fill else 150.0,
                 format="%.2f",
             )
-
-        # ── Linha 2: Estado (seletor) | Cidade (texto) | Lat | Lon ────────
-        # Determina o estado inicial (do _fill ou padrão RS)
-        _fill_estado = _fill.get("estado") if _fill else None
-        if not _fill_estado and _fill:
-            # Infere pelo centróide mais próximo das coords do _fill
-            _fill_estado = mcp_server._estado_da_coordenada(
-                float(_fill["latitude"]), float(_fill["longitude"])
-            )
-        _fill_estado = _fill_estado or "RS"
-        _fill_opcao  = next(
-            (o for o in _OPCOES_ESTADO if o.startswith(_fill_estado + " ")), _OPCOES_ESTADO[0]
-        )
-
-        col4, col5, col6, col7 = st.columns([2, 2, 1, 1])
-        with col4:
-            estado_opcao = st.selectbox(
-                "Estado",
-                options=_OPCOES_ESTADO,
-                index=_OPCOES_ESTADO.index(_fill_opcao),
-                help="Selecione o estado. Latitude e longitude são preenchidos automaticamente.",
-            )
-            estado_sigla = _SIGLA_DE_OPCAO[estado_opcao]
-            _, _lat_est, _lon_est = ESTADOS_BR[estado_sigla]
-
-        with col5:
             cidade = st.text_input(
                 "Cidade",
-                value=_fill.get("cidade", "") if _fill else "",
-                placeholder="ex: Porto Alegre",
+                value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre",
+                placeholder="ex: São Paulo",
             )
 
-        with col6:
+        with col3:
             lat = st.number_input(
                 "Latitude",
-                value=float(_fill["latitude"]) if _fill else _lat_est,
-                format="%.4f", step=0.0001,
-                help="Preenchido automaticamente pelo estado. Edite para precisão.",
+                value=float(_fill["latitude"]) if _fill else -30.0346,
+                format="%.4f", step=0.001,
             )
-
-        with col7:
             lon = st.number_input(
                 "Longitude",
-                value=float(_fill["longitude"]) if _fill else _lon_est,
-                format="%.4f", step=0.0001,
-                help="Preenchido automaticamente pelo estado. Edite para precisão.",
+                value=float(_fill["longitude"]) if _fill else -51.2177,
+                format="%.4f", step=0.001,
             )
 
         submitted = st.form_submit_button(
@@ -655,8 +500,7 @@ else:
             "associado_id": assoc_id.strip() or "demo_user",
             "valor":        valor,
             "categoria":    categoria,
-            "cidade":       cidade or estado_opcao.split(" — ")[-1],
-            "estado":       estado_sigla,
+            "cidade":       cidade,
             "timestamp":    datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "latitude":     lat,
             "longitude":    lon,
@@ -664,10 +508,9 @@ else:
 
         # Mensagem do usuário no chat
         valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        cidade_exib = tx["cidade"]
         _add_msg("user",
             f"📤 Analisar transação: <strong>{valor_fmt}</strong> em "
-            f"<strong>{categoria}</strong> — {cidade_exib} ({estado_sigla})<br>"
+            f"<strong>{categoria}</strong> — {cidade}<br>"
             f"<span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; "
             f"{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>"
         )
