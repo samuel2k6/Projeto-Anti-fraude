@@ -417,56 +417,58 @@ if st.session_state.aguardando_resp:
             st.rerun()
 
 
-else:
     # ── Formulário normal de transação ────────────────────────────────────────
-with st.form("form_transacao", clear_on_submit=False):
-    st.markdown("**📋 Dados da Transação**")
-    
-    # Colunas principais normais e responsivas (ID, Categoria, Valor, Cidade)
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        assoc_id = st.text_input("ID do Associado", value=_fill["associado_id"] if _fill else "demo_user", placeholder="ex: assoc_001")
-        categoria = st.selectbox(
-            "Categoria", 
-            options=[
-                "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                "Streaming / Entretenimento Digital", "Outros"
-            ],
-            index=[
-                "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                "Streaming / Entretenimento Digital", "Outros"
-            ].index(_fill["categoria"]) if _fill and _fill["categoria"] in [
-                "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                "Streaming / Entretenimento Digital", "Outros"
-            ] else 0,
-        )
-        
-    with col2:
-        valor = st.number_input("Valor (R$)", min_value=0.01, max_value=999999.99, step=10.0, value=float(_fill["valor"]) if _fill else 150.0, format="%.2f")
-        cidade = st.text_input("Cidade", value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", placeholder="ex: São Paulo")
-    
-    st.write("") # Pequeno espaçador visual
-    
-    # Bloco isolado injetando a classe CSS para fixar a row de coordenadas lado a lado
-    st.markdown('<div class="lat-lon-row">', unsafe_allow_html=True)
-    coord_col1, coord_col2 = st.columns(2)
-    with coord_col1:
-        lat = st.number_input("Latitude", value=float(_fill["latitude"]) if _fill else -30.0346, format="%.4f", step=0.001)
-    with coord_col2:
-        lon = st.number_input("Longitude", value=float(_fill["longitude"]) if _fill else -51.2177, format="%.4f", step=0.001)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    submitted = st.form_submit_button("🔍 Analisar Transação", use_container_width=True, type="primary")
+    else:
+        with st.form("form_transacao", clear_on_submit=False):
+            st.markdown("**📋 Dados da Transação**")
+            
+            # Colunas normais para os campos padrão
+            col1, col2 = st.columns(2)
+            with col1:
+                assoc_id = st.text_input("ID do Associado", value=_fill["associado_id"] if _fill else "demo_user", placeholder="ex: assoc_001")
+                categoria = st.selectbox(
+                    "Categoria",
+                    options=[
+                        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
+                        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
+                        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
+                        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+                        "Streaming / Entretenimento Digital", "Outros"
+                    ],
+                    index=0 if not _fill else (
+                        [
+                            "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
+                            "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
+                            "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
+                            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+                            "Streaming / Entretenimento Digital", "Outros"
+                        ].index(_fill["categoria"]) if _fill["categoria"] in [
+                            "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
+                            "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
+                            "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
+                            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+                            "Streaming / Entretenimento Digital", "Outros"
+                        ] else 0
+                    ),
+                )
+            with col2:
+                valor = st.number_input("Valor (R$)", min_value=0.01, max_value=999999.99, step=10.0, value=float(_fill["valor"]) if _fill else 150.0, format="%.2f")
+                cidade = st.text_input("Cidade", value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", placeholder="ex: São Paulo")
+            
+            st.write("") # Pequeno espaçador visual
+            
+            # Container encapsulado para Latitude e Longitude (Lado a Lado controlado via CSS customizado)
+            st.markdown('<div class="lat-lon-row">', unsafe_allow_html=True)
+            coord_col1, coord_col2 = st.columns(2)
+            with coord_col1:
+                lat = st.number_input("Latitude", value=float(_fill["latitude"]) if _fill else -30.0346, format="%.4f", step=0.001)
+            with coord_col2:
+                lon = st.number_input("Longitude", value=float(_fill["longitude"]) if _fill else -51.2177, format="%.4f", step=0.001)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            submitted = st.form_submit_button("🔍 Analisar Transação", use_container_width=True, type="primary")
+
+
 
                          
         if submitted:
