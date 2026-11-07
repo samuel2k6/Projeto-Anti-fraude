@@ -425,20 +425,15 @@ if st.session_state.aguardando_resp:
 
 else:
     # ── Formulário normal de transação ────────────────────────────────────────
-        with st.form("form_transacao", clear_on_submit=False):
+    with st.form("form_transacao", clear_on_submit=False):
         st.markdown("**📋 Dados da Transação**")
         
         # Criação de 4 colunas para colocar Latitude e Longitude lado a lado
-        col1, col2, col3, col4 = st.columns()
-        
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            assoc_id = st.text_input(
-                "ID do Associado", 
-                value=_fill["associado_id"] if _fill else "demo_user", 
-                placeholder="ex: assoc_001"
-            )
+            assoc_id = st.text_input("ID do Associado", value=_fill["associado_id"] if _fill else "demo_user", placeholder="ex: assoc_001")
             categoria = st.selectbox(
-                "Categoria", 
+                "Categoria",
                 options=[
                     "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
                     "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
@@ -462,85 +457,45 @@ else:
                     ] else 0
                 ),
             )
-            
         with col2:
-            valor = st.number_input(
-                "Valor (R$)", 
-                min_value=0.01, 
-                max_value=999999.99, 
-                step=10.0, 
-                value=float(_fill["valor"]) if _fill else 150.0, 
-                format="%.2f"
-            )
-            cidade = st.text_input(
-                "Cidade", 
-                value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", 
-                placeholder="ex: São Paulo"
-            )
-            
+            valor = st.number_input("Valor (R$)", min_value=0.01, max_value=999999.99, step=10.0, value=float(_fill["valor"]) if _fill else 150.0, format="%.2f")
+            cidade = st.text_input("Cidade", value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", placeholder="ex: São Paulo")
         with col3:
-            lat = st.number_input(
-                "Latitude", 
-                value=float(_fill["latitude"]) if _fill else -30.0346, 
-                format="%.4f", 
-                step=0.001
-            )
-            
+            lat = st.number_input("Latitude", value=float(_fill["latitude"]) if _fill else -30.0346, format="%.4f", step=0.001)
         with col4:
-            lon = st.number_input(
-                "Longitude", 
-                value=float(_fill["longitude"]) if _fill else -51.2177, 
-                format="%.4f", 
-                step=0.001
-            )
+            lon = st.number_input("Longitude", value=float(_fill["longitude"]) if _fill else -51.2177, format="%.4f", step=0.001)
             
-        submitted = st.form_submit_button(
-            "🔍 Analisar Transação", 
-            use_container_width=True, 
-            type="primary"
-        )
-   
+        submitted = st.form_submit_button("🔍 Analisar Transação", use_container_width=True, type="primary")
+        
+        if submitted:
+            tx = {
+                "transacao_id": f"tx-{int(time.time()*1000)}",
+                "associado_id": assoc_id.strip() or "demo_user",
+                "valor": valor,
+                "categoria": categoria,
+                "cidade": cidade,
+                "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": lat,
+                "longitude": lon,
+            }
+            # Mensagem do usuário no chat
+            valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            _add_msg("user", f"📤 Analisar transação: <strong>{valor_fmt}</strong> em <strong>{categoria}</strong> — {cidade}<br><span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>")
+            
+            with st.spinner("Agente analisando..."):
+                analise = _analisar(tx)
+                explicacao = json.loads(explicar_risco_fraude(json.dumps(analise, ensure_ascii=False)))
+                html, role = _construir_mensagem_agente(analise, explicacao)
+                _add_msg(role, html)
                 
+                # Se crítico: ativa modo HITL
+                if analise["score_risco"] > 70:
+                    st.session_state.aguardando_resp = tx["transacao_id"]
+                    st.session_state.ultima_analise = analise
+                    _add_msg("system", "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo.")
+            st.rerun()
 
-    if submitted:
-        tx = {
-            "transacao_id": f"tx-{int(time.time()*1000)}",
-            "associado_id": assoc_id.strip() or "demo_user",
-            "valor":        valor,
-            "categoria":    categoria,
-            "cidade":       cidade,
-            "timestamp":    datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "latitude":     lat,
-            "longitude":    lon,
-        }
-
-        # Mensagem do usuário no chat
-        valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        _add_msg("user",
-            f"📤 Analisar transação: <strong>{valor_fmt}</strong> em "
-            f"<strong>{categoria}</strong> — {cidade}<br>"
-            f"<span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; "
-            f"{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>"
-        )
-
-        with st.spinner("Agente analisando..."):
-            analise    = _analisar(tx)
-            explicacao = json.loads(
-                explicar_risco_fraude(json.dumps(analise, ensure_ascii=False))
-            )
-
-        html, role = _construir_mensagem_agente(analise, explicacao)
-        _add_msg(role, html)
-
-        # Se crítico: ativa modo HITL
-        if analise["score_risco"] > 70:
-            st.session_state.aguardando_resp = tx["transacao_id"]
-            st.session_state.ultima_analise  = analise
-            _add_msg("system",
-                "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo."
-            )
-
-        st.rerun()
+        
 
 
 # ── Rodapé ────────────────────────────────────────────────────────────────────
