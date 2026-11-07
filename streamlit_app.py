@@ -416,157 +416,299 @@ st.markdown("""
 chat_container = st.container()
 
 with chat_container:
+
     if not st.session_state.messages:
+
         st.markdown("""
-<div class="msg-agent">
-👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao <strong>IBM watsonx Orchestrate</strong>.<br><br>
-Posso analisar uma transação financeira em tempo real e dizer se ela parece segura ou suspeita —
-em menos de 50 ms.<br><br>
-<strong>Para começar:</strong> preencha os campos abaixo com os dados da transação, ou escolha um
-exemplo pronto na barra lateral. 👈
-</div>
-""", unsafe_allow_html=True)
+        <div class="msg-agent">
+        👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao
+        <strong>IBM watsonx Orchestrate</strong>.<br><br>
+
+        Posso analisar uma transação financeira em tempo real e dizer
+        se ela parece segura ou suspeita — em menos de 50 ms.<br><br>
+
+        <strong>Para começar:</strong> preencha os campos abaixo com
+        os dados da transação, ou escolha um exemplo pronto na barra
+        lateral. 👈
+        </div>
+        """, unsafe_allow_html=True)
+
     else:
+
         for msg in st.session_state.messages:
             _render_msg(msg)
 
+
+         
+
 # ── Formulário de entrada de transação ────────────────────────────────────────
-st.divider()
+
 _fill = st.session_state.get("_fill_tx", None)
 
+# ── Controle HITL: aguardando confirmação do associado ────────────────────────
 if st.session_state.aguardando_resp:
-    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="msg-system">'
+        '⏳ <strong>Aguardando sua decisão</strong> — '
+        'a transação está pausada.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
     col1, col2 = st.columns(2)
+
     with col1:
-        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
-            _add_msg("user", "✅ Sim, fui eu — pode liberar")
-            _processar_resposta_hitl("SIM", st.session_state.ultima_analise, st.session_state.ultima_analise)
-            st.rerun()
-    with col2:
-        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
-            _add_msg("user", "🚫 Não fui eu — bloquear cartão")
-            _processar_resposta_hitl("NÃO", st.session_state.ultima_analise, st.session_state.ultima_analise)
+        if st.button(
+            "✅ Sim, fui eu — liberar",
+            use_container_width=True,
+            type="primary"
+        ):
+            _add_msg(
+                "user",
+                "✅ Sim, fui eu — pode liberar"
+            )
+
+            _processar_resposta_hitl(
+                "SIM",
+                st.session_state.ultima_analise,
+                st.session_state.ultima_analise
+            )
+
             st.rerun()
 
+    with col2:
+        if st.button(
+            "🚫 Não fui eu — bloquear cartão",
+            use_container_width=True
+        ):
+            _add_msg(
+                "user",
+                "🚫 Não fui eu — bloquear cartão"
+            )
+
+            _processar_resposta_hitl(
+                "NÃO",
+                st.session_state.ultima_analise,
+                st.session_state.ultima_analise
+            )
+
+            st.rerun()
+
+
+# ── Formulário normal de transação ────────────────────────────────────────────
 else:
+
+    categorias = [
+        "Supermercados",
+        "Restaurantes",
+        "Farmácias",
+        "Postos de Combustível",
+        "Eletrônicos",
+        "Joalherias",
+        "Artigos de Luxo",
+        "Casas de Câmbio",
+        "Cassinos",
+        "Apostas",
+        "Restaurante / Alimentação",
+        "Transferência Financeira",
+        "E-commerce / Eletrônicos",
+        "Vestuário / Moda",
+        "Educação / Ensino",
+        "Streaming / Entretenimento Digital",
+        "Outros"
+    ]
+
     with st.form("form_transacao", clear_on_submit=False):
+
         st.markdown("**📋 Dados da Transação**")
+
+        # ── Dados principais ──────────────────────────────────────────────────
         col1, col2 = st.columns(2)
 
+        with col1:
 
-# Preenche campos se um exemplo foi selecionado
-_fill = st.session_state.get("_fill_tx", None)
+            assoc_id = st.text_input(
+                "ID do Associado",
+                value=_fill["associado_id"] if _fill else "demo_user",
+                placeholder="ex: assoc_001"
+            )
 
-if st.session_state.aguardando_resp:
-    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
-            _add_msg('user', "✅ Sim, fui eu — pode liberar")
-            # Passa a análise guardada em sessão para evitar perda de contexto
-            _processar_resposta_hitl('SIM', st.session_state.ultima_analise, st.session_state.ultima_analise)
-            st.meta_private_attributes = {}
-            st.rerun()
-    with col2:
-        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
-            _add_msg('user', "🚫 Não fui eu — bloquear cartão")
-            _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
-            st.rerun()
-
-
-    # ── Formulário normal de transação ────────────────────────────────────────
-    else:
-        with st.form("form_transacao", clear_on_submit=False):
-            st.markdown("**📋 Dados da Transação**")
-            
-            # Colunas normais para os campos padrão
-            col1, col2 = st.columns(2)
-            with col1:
-                assoc_id = st.text_input("ID do Associado", value=_fill["associado_id"] if _fill else "demo_user", placeholder="ex: assoc_001")
-                categoria = st.selectbox(
-                    "Categoria",
-                    options=[
-                        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
-                        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
-                        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
-                        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-                        "Streaming / Entretenimento Digital", "Outros"
-                    ],
-                    index=0 if not _fill else (
-                        [
-                            "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
-                            "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
-                            "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
-                            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-                            "Streaming / Entretenimento Digital", "Outros"
-                        ].index(_fill["categoria"]) if _fill["categoria"] in [
-                            "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
-                            "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
-                            "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
-                            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-                            "Streaming / Entretenimento Digital", "Outros"
-                        ] else 0
-                    ),
+            categoria = st.selectbox(
+                "Categoria",
+                options=categorias,
+                index=(
+                    categorias.index(_fill["categoria"])
+                    if _fill and _fill["categoria"] in categorias
+                    else 0
                 )
-            with col2:
-                valor = st.number_input("Valor (R$)", min_value=0.01, max_value=999999.99, step=10.0, value=float(_fill["valor"]) if _fill else 150.0, format="%.2f")
-                cidade = st.text_input("Cidade", value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", placeholder="ex: São Paulo")
-            
-            st.write("") # Pequeno espaçador visual
-            
-            # Container encapsulado para Latitude e Longitude (Lado a Lado controlado via CSS customizado)
-            st.markdown('<div class="lat-lon-row">', unsafe_allow_html=True)
-            coord_col1, coord_col2 = st.columns(2)
-            with coord_col1:
-                lat = st.number_input("Latitude", value=float(_fill["latitude"]) if _fill else -30.0346, format="%.4f", step=0.001)
-            with coord_col2:
-                lon = st.number_input("Longitude", value=float(_fill["longitude"]) if _fill else -51.2177, format="%.4f", step=0.001)
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            submitted = st.form_submit_button("🔍 Analisar Transação", use_container_width=True, type="primary")
+            )
 
+        with col2:
 
+            valor = st.number_input(
+                "Valor (R$)",
+                min_value=0.01,
+                max_value=999999.99,
+                step=10.0,
+                value=float(_fill["valor"]) if _fill else 150.0,
+                format="%.2f"
+            )
 
-                         
-        if submitted:
-            tx = {
-                "transacao_id": f"tx-{int(time.time()*1000)}",
-                "associado_id": assoc_id.strip() or "demo_user",
-                "valor": valor,
-                "categoria": categoria,
-                "cidade": cidade,
-                "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": lat,
-                "longitude": lon,
-            }
-            # Mensagem do usuário no chat
-            valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            _add_msg("user", f"📤 Analisar transação: <strong>{valor_fmt}</strong> em <strong>{categoria}</strong> — {cidade}<br><span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>")
-            
-            with st.spinner("Agente analisando..."):
+            cidade = st.text_input(
+                "Cidade",
+                value=(
+                    _fill.get("cidade", "Porto Alegre")
+                    if _fill else "Porto Alegre"
+                ),
+                placeholder="ex: São Paulo"
+            )
+
+        st.write("")
+
+        # ── Coordenadas geográficas ───────────────────────────────────────────
+        st.markdown("**📍 Localização da Transação**")
+
+        coord_col1, coord_col2 = st.columns(2)
+
+        with coord_col1:
+
+            lat = st.number_input(
+                "Latitude",
+                value=(
+                    float(_fill["latitude"])
+                    if _fill else -30.0346
+                ),
+                format="%.4f",
+                step=0.001
+            )
+
+        with coord_col2:
+
+            lon = st.number_input(
+                "Longitude",
+                value=(
+                    float(_fill["longitude"])
+                    if _fill else -51.2177
+                ),
+                format="%.4f",
+                step=0.001
+            )
+
+        st.write("")
+
+        # ── Botão de análise ──────────────────────────────────────────────────
+        submitted = st.form_submit_button(
+            "🔍 Analisar Transação",
+            use_container_width=True,
+            type="primary"
+        )
+
+    # ── Processamento da transação ────────────────────────────────────────────
+    if submitted:
+
+        tx = {
+            "transacao_id": f"tx-{int(time.time() * 1000)}",
+            "associado_id": assoc_id.strip() or "demo_user",
+            "valor": valor,
+            "categoria": categoria,
+            "cidade": cidade,
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": lat,
+            "longitude": lon,
+        }
+
+        # ── Formatação do valor monetário ─────────────────────────────────────
+        valor_fmt = (
+            f"R$ {valor:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
+        # ── Registra mensagem do associado ────────────────────────────────────
+        _add_msg(
+            "user",
+            f"📤 Analisar transação: "
+            f"<strong>{valor_fmt}</strong> "
+            f"em <strong>{categoria}</strong> — {cidade}<br>"
+            f"<span style='font-size:0.82rem;opacity:0.8'>"
+            f"Associado: {tx['associado_id']} &nbsp;·&nbsp; "
+            f"{datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            f"</span>"
+        )
+
+        # ── Executa análise MCP ───────────────────────────────────────────────
+        try:
+
+            with st.spinner("🛡️ Agente analisando transação..."):
+
+                # Motor de análise de risco
                 analise = _analisar(tx)
-                explicacao = json.loads(explicar_risco_fraude(json.dumps(analise, ensure_ascii=False)))
-                html, role = _construir_mensagem_agente(analise, explicacao)
-                _add_msg(role, html)
-                
-                # Se crítico: ativa modo HITL
-                if analise["score_risco"] > 70:
-                    st.session_state.aguardando_resp = tx["transacao_id"]
-                    st.session_state.ultima_analise = analise
-                    _add_msg("system", "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo.")
-            st.rerun()
 
-        
+                # Geração da explicação para o associado
+                explicacao = json.loads(
+                    explicar_risco_fraude(
+                        json.dumps(
+                            analise,
+                            ensure_ascii=False
+                        )
+                    )
+                )
+
+                # Constrói resposta visual do agente
+                html, role = _construir_mensagem_agente(
+                    analise,
+                    explicacao
+                )
+
+                # Adiciona resposta ao chat
+                _add_msg(role, html)
+
+                # ── Fluxo HITL para risco crítico ────────────────────────────
+                if analise["score_risco"] > 70:
+
+                    st.session_state.aguardando_resp = tx["transacao_id"]
+
+                    st.session_state.ultima_analise = analise
+
+                    _add_msg(
+                        "system",
+                        "⏸️ Fluxo de liquidação pausado — "
+                        "aguardando sua confirmação abaixo."
+                    )
+
+                # ── Limpa exemplo selecionado ────────────────────────────────
+                st.session_state.pop("_fill_tx", None)
+
+        except Exception as e:
+
+            _add_msg(
+                "block",
+                "❌ <strong>Erro ao processar a transação.</strong><br>"
+                f"Detalhes: {str(e)}"
+            )
+
+        # Atualiza a interface
+        st.rerun()
 
 
 # ── Rodapé ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="ibm-footer">
-  Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
-  Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
-  <a href="https://github.com/samuel2k6/Projeto-Anti-fraude" target="_blank"
-     style="color:#0f62fe;text-decoration:none">
-    GitHub ↗
-  </a>
-</div>
-""", unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="ibm-footer">
+        Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
+        Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
+
+        <a
+            href="https://github.com/samuel2k6/Projeto-Anti-fraude"
+            target="_blank"
+            style="color:#0f62fe;text-decoration:none"
+        >
+            GitHub ↗
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
