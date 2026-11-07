@@ -697,18 +697,18 @@ else:
 
 st.markdown(
     """
-    <div class="ibm-footer">
-        Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
-        Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
-
-        <a
-            href="https://github.com/samuel2k6/Projeto-Anti-fraude"
-            target="_blank"
-            style="color:#0f62fe;text-decoration:none"
-        >
-            GitHub ↗
-        </a>
-    </div>
+<div class="ibm-footer">
+    Sicredi · AI Experiential Learning Lab 2026
+    &nbsp;|&nbsp;
+    Motor MCP local · IBM watsonx Orchestrate (simulação)
+    &nbsp;|&nbsp;
+    <a href="https://github.com/samuel2k6/Projeto-Anti-fraude"
+       target="_blank"
+       rel="noopener noreferrer"
+       style="color:#0f62fe;text-decoration:none">
+       GitHub ↗
+    </a>
+</div>
     """,
     unsafe_allow_html=True
 )
