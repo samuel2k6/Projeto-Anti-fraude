@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 streamlit_app.py — Simulador de Chat do watsonx Orchestrate
 =============================================================
@@ -54,11 +54,13 @@ st.set_page_config(
 )
 
 # ── CSS customizado (visual watsonx Orchestrate) ──────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* Fundo geral */
-.stApp { background-color: #f4f4f4; }
-
+.stApp {
+    background-color: #f4f4f4;
+}
 /* Cabeçalho do chat */
 .wx-header {
     background: linear-gradient(135deg, #0f62fe 0%, #0043ce 100%);
@@ -75,29 +77,59 @@ st.markdown("""
 
 /* Bolhas do chat */
 .msg-user {
-    background: #0f62fe; color: white; padding: 12px 16px;
-    border-radius: 18px 18px 4px 18px; margin: 8px 0;
-    max-width: 75%; margin-left: auto; font-size: 0.93rem; line-height: 1.5;
+    background: #0f62fe;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 18px 18px 4px 18px;
+    margin: 8px 0;
+    max-width: 75%;
+    margin-left: auto;
+    font-size: 0.93rem;
+    line-height: 1.5;
 }
 .msg-agent {
-    background: white; color: #161616; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #e0e0e0; font-size: 0.93rem; line-height: 1.55;
+    background: white;
+    color: #161616;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #e0e0e0;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 .msg-system {
-    background: #fff3cd; color: #664d03; padding: 10px 14px;
-    border-radius: 10px; margin: 6px auto; max-width: 70%;
-    text-align: center; font-size: 0.82rem; border: 1px solid #ffc107;
+    background: #fff3cd;
+    color: #664d03;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin: 6px auto;
+    max-width: 70%;
+    text-align: center;
+    font-size: 0.82rem;
+    border: 1px solid #ffc107;
 }
 .msg-block {
-    background: #fff1f1; color: #a2191f; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #ffd7d9; font-size: 0.93rem; line-height: 1.55;
+    background: #fff1f1;
+    color: #a2191f;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #ffd7d9;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 .msg-ok {
-    background: #defbe6; color: #044317; padding: 12px 16px;
-    border-radius: 18px 18px 18px 4px; margin: 8px 0;
-    max-width: 80%; border: 1px solid #a7f0ba; font-size: 0.93rem; line-height: 1.55;
+    background: #defbe6;
+    color: #044317;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    margin: 8px 0;
+    max-width: 80%;
+    border: 1px solid #a7f0ba;
+    font-size: 0.93rem;
+    line-height: 1.55;
 }
 
 /* Badge de score */
@@ -108,40 +140,46 @@ st.markdown("""
 
 /* Rodapé IBM */
 .ibm-footer {
-    text-align: center; color: #6f6f6f; font-size: 0.75rem;
-    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e0e0e0;
+    text-align: center;
+    color: #6f6f6f;
+    font-size: 0.75rem;
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
 }
-.chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
-
+.chat-area {
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
 [data-testid="stWidgetLabel"] p {
     color: #393939 !important;
     font-weight: 500 !important;
 }
-
-/* Força as colunas do formulário a se manterem rigidamente na horizontal    */
-[data-testid="stHorizontalBlock"] {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"],
+div.lat-lon-row [data-testid="stHorizontalBlock"] {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: stretch !important;
     gap: 0.75rem !important;
 }
-
-/* Remove a largura mínima padrão que empurrava as caixas para baixo        */
-[data-testid="stHorizontalBlock"] > div {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"] > div,
+div.lat-lon-row [data-testid="stHorizontalBlock"] > div {
     min-width: 0 !important;
     flex: 1 1 0% !important;
 }
-
-/* Ajustes finos nos rótulos das colunas horizontais                        */
-[data-testid="stHorizontalBlock"] label p {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) label p,
+div.lat-lon-row label p {
     font-size: 0.85rem !important;
     white-space: nowrap !important;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 
@@ -280,7 +318,6 @@ def _processar_resposta_hitl(resposta: str, analise: dict, explicacao: dict) -> 
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-    # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🛡️ Agente Anti-Fraude")
     st.markdown("**IBM watsonx Orchestrate** · Sicredi")
@@ -379,127 +416,299 @@ st.markdown("""
 chat_container = st.container()
 
 with chat_container:
+
     if not st.session_state.messages:
+
         st.markdown("""
-<div class="msg-agent">
-👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao <strong>IBM watsonx Orchestrate</strong>.<br><br>
-Posso analisar uma transação financeira em tempo real e dizer se ela parece segura ou suspeita —
-em menos de 50 ms.<br><br>
-<strong>Para começar:</strong> preencha os campos abaixo com os dados da transação, ou escolha um
-exemplo pronto na barra lateral. 👈
-</div>
-""", unsafe_allow_html=True)
+        <div class="msg-agent">
+        👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao
+        <strong>IBM watsonx Orchestrate</strong>.<br><br>
+
+        Posso analisar uma transação financeira em tempo real e dizer
+        se ela parece segura ou suspeita — em menos de 50 ms.<br><br>
+
+        <strong>Para começar:</strong> preencha os campos abaixo com
+        os dados da transação, ou escolha um exemplo pronto na barra
+        lateral. 👈
+        </div>
+        """, unsafe_allow_html=True)
+
     else:
+
         for msg in st.session_state.messages:
             _render_msg(msg)
 
 
-# ── Formulário de entrada de transação ────────────────────────────────────────
-st.divider()
+         
 
-# Preenche campos se um exemplo foi selecionado
+# ── Formulário de entrada de transação ────────────────────────────────────────
+
 _fill = st.session_state.get("_fill_tx", None)
 
+# ── Controle HITL: aguardando confirmação do associado ────────────────────────
 if st.session_state.aguardando_resp:
-    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="msg-system">'
+        '⏳ <strong>Aguardando sua decisão</strong> — '
+        'a transação está pausada.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
     col1, col2 = st.columns(2)
+
     with col1:
-        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
-            _add_msg('user', "✅ Sim, fui eu — pode liberar")
-            # Passa a análise guardada em sessão para evitar perda de contexto
-            _processar_resposta_hitl('SIM', st.session_state.ultima_analise, st.session_state.ultima_analise)
-            st.meta_private_attributes = {}
+        if st.button(
+            "✅ Sim, fui eu — liberar",
+            use_container_width=True,
+            type="primary"
+        ):
+            _add_msg(
+                "user",
+                "✅ Sim, fui eu — pode liberar"
+            )
+
+            _processar_resposta_hitl(
+                "SIM",
+                st.session_state.ultima_analise,
+                st.session_state.ultima_analise
+            )
+
             st.rerun()
+
     with col2:
-        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
-            _add_msg('user', "🚫 Não fui eu — bloquear cartão")
-            _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
+        if st.button(
+            "🚫 Não fui eu — bloquear cartão",
+            use_container_width=True
+        ):
+            _add_msg(
+                "user",
+                "🚫 Não fui eu — bloquear cartão"
+            )
+
+            _processar_resposta_hitl(
+                "NÃO",
+                st.session_state.ultima_analise,
+                st.session_state.ultima_analise
+            )
+
             st.rerun()
 
 
+# ── Formulário normal de transação ────────────────────────────────────────────
 else:
-    # ── Formulário normal de transação ────────────────────────────────────────
+
+    categorias = [
+        "Supermercados",
+        "Restaurantes",
+        "Farmácias",
+        "Postos de Combustível",
+        "Eletrônicos",
+        "Joalherias",
+        "Artigos de Luxo",
+        "Casas de Câmbio",
+        "Cassinos",
+        "Apostas",
+        "Restaurante / Alimentação",
+        "Transferência Financeira",
+        "E-commerce / Eletrônicos",
+        "Vestuário / Moda",
+        "Educação / Ensino",
+        "Streaming / Entretenimento Digital",
+        "Outros"
+    ]
+
     with st.form("form_transacao", clear_on_submit=False):
+
         st.markdown("**📋 Dados da Transação**")
-        
-        # Criação de 4 colunas para colocar Latitude e Longitude lado a lado
-        col1, col2, col3, col4 = st.columns(4)
+
+        # ── Dados principais ──────────────────────────────────────────────────
+        col1, col2 = st.columns(2)
+
         with col1:
-            assoc_id = st.text_input("ID do Associado", value=_fill["associado_id"] if _fill else "demo_user", placeholder="ex: assoc_001")
+
+            assoc_id = st.text_input(
+                "ID do Associado",
+                value=_fill["associado_id"] if _fill else "demo_user",
+                placeholder="ex: assoc_001"
+            )
+
             categoria = st.selectbox(
                 "Categoria",
-                options=[
-                    "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                    "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                    "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                    "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                    "Streaming / Entretenimento Digital", "Outros"
-                ],
-                index=0 if not _fill else (
-                    [
-                        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                        "Streaming / Entretenimento Digital", "Outros"
-                    ].index(_fill["categoria"]) if _fill["categoria"] in [
-                        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível", 
-                        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio", 
-                        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira", 
-                        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino", 
-                        "Streaming / Entretenimento Digital", "Outros"
-                    ] else 0
-                ),
+                options=categorias,
+                index=(
+                    categorias.index(_fill["categoria"])
+                    if _fill and _fill["categoria"] in categorias
+                    else 0
+                )
             )
-        with col2:
-            valor = st.number_input("Valor (R$)", min_value=0.01, max_value=999999.99, step=10.0, value=float(_fill["valor"]) if _fill else 150.0, format="%.2f")
-            cidade = st.text_input("Cidade", value=_fill.get("cidade", "Porto Alegre") if _fill else "Porto Alegre", placeholder="ex: São Paulo")
-        with col3:
-            lat = st.number_input("Latitude", value=float(_fill["latitude"]) if _fill else -30.0346, format="%.4f", step=0.001)
-        with col4:
-            lon = st.number_input("Longitude", value=float(_fill["longitude"]) if _fill else -51.2177, format="%.4f", step=0.001)
-            
-        submitted = st.form_submit_button("🔍 Analisar Transação", use_container_width=True, type="primary")
-        
-        if submitted:
-            tx = {
-                "transacao_id": f"tx-{int(time.time()*1000)}",
-                "associado_id": assoc_id.strip() or "demo_user",
-                "valor": valor,
-                "categoria": categoria,
-                "cidade": cidade,
-                "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                "latitude": lat,
-                "longitude": lon,
-            }
-            # Mensagem do usuário no chat
-            valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            _add_msg("user", f"📤 Analisar transação: <strong>{valor_fmt}</strong> em <strong>{categoria}</strong> — {cidade}<br><span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>")
-            
-            with st.spinner("Agente analisando..."):
-                analise = _analisar(tx)
-                explicacao = json.loads(explicar_risco_fraude(json.dumps(analise, ensure_ascii=False)))
-                html, role = _construir_mensagem_agente(analise, explicacao)
-                _add_msg(role, html)
-                
-                # Se crítico: ativa modo HITL
-                if analise["score_risco"] > 70:
-                    st.session_state.aguardando_resp = tx["transacao_id"]
-                    st.session_state.ultima_analise = analise
-                    _add_msg("system", "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo.")
-            st.rerun()
 
-        
+        with col2:
+
+            valor = st.number_input(
+                "Valor (R$)",
+                min_value=0.01,
+                max_value=999999.99,
+                step=10.0,
+                value=float(_fill["valor"]) if _fill else 150.0,
+                format="%.2f"
+            )
+
+            cidade = st.text_input(
+                "Cidade",
+                value=(
+                    _fill.get("cidade", "Porto Alegre")
+                    if _fill else "Porto Alegre"
+                ),
+                placeholder="ex: São Paulo"
+            )
+
+        st.write("")
+
+        # ── Coordenadas geográficas ───────────────────────────────────────────
+        st.markdown("**📍 Localização da Transação**")
+
+        coord_col1, coord_col2 = st.columns(2)
+
+        with coord_col1:
+
+            lat = st.number_input(
+                "Latitude",
+                value=(
+                    float(_fill["latitude"])
+                    if _fill else -30.0346
+                ),
+                format="%.4f",
+                step=0.001
+            )
+
+        with coord_col2:
+
+            lon = st.number_input(
+                "Longitude",
+                value=(
+                    float(_fill["longitude"])
+                    if _fill else -51.2177
+                ),
+                format="%.4f",
+                step=0.001
+            )
+
+        st.write("")
+
+        # ── Botão de análise ──────────────────────────────────────────────────
+        submitted = st.form_submit_button(
+            "🔍 Analisar Transação",
+            use_container_width=True,
+            type="primary"
+        )
+
+    # ── Processamento da transação ────────────────────────────────────────────
+    if submitted:
+
+        tx = {
+            "transacao_id": f"tx-{int(time.time() * 1000)}",
+            "associado_id": assoc_id.strip() or "demo_user",
+            "valor": valor,
+            "categoria": categoria,
+            "cidade": cidade,
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "latitude": lat,
+            "longitude": lon,
+        }
+
+        # ── Formatação do valor monetário ─────────────────────────────────────
+        valor_fmt = (
+            f"R$ {valor:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
+        # ── Registra mensagem do associado ────────────────────────────────────
+        _add_msg(
+            "user",
+            f"📤 Analisar transação: "
+            f"<strong>{valor_fmt}</strong> "
+            f"em <strong>{categoria}</strong> — {cidade}<br>"
+            f"<span style='font-size:0.82rem;opacity:0.8'>"
+            f"Associado: {tx['associado_id']} &nbsp;·&nbsp; "
+            f"{datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            f"</span>"
+        )
+
+        # ── Executa análise MCP ───────────────────────────────────────────────
+        try:
+
+            with st.spinner("🛡️ Agente analisando transação..."):
+
+                # Motor de análise de risco
+                analise = _analisar(tx)
+
+                # Geração da explicação para o associado
+                explicacao = json.loads(
+                    explicar_risco_fraude(
+                        json.dumps(
+                            analise,
+                            ensure_ascii=False
+                        )
+                    )
+                )
+
+                # Constrói resposta visual do agente
+                html, role = _construir_mensagem_agente(
+                    analise,
+                    explicacao
+                )
+
+                # Adiciona resposta ao chat
+                _add_msg(role, html)
+
+                # ── Fluxo HITL para risco crítico ────────────────────────────
+                if analise["score_risco"] > 70:
+
+                    st.session_state.aguardando_resp = tx["transacao_id"]
+
+                    st.session_state.ultima_analise = analise
+
+                    _add_msg(
+                        "system",
+                        "⏸️ Fluxo de liquidação pausado — "
+                        "aguardando sua confirmação abaixo."
+                    )
+
+                # ── Limpa exemplo selecionado ────────────────────────────────
+                st.session_state.pop("_fill_tx", None)
+
+        except Exception as e:
+
+            _add_msg(
+                "block",
+                "❌ <strong>Erro ao processar a transação.</strong><br>"
+                f"Detalhes: {str(e)}"
+            )
+
+        # Atualiza a interface
+        st.rerun()
 
 
 # ── Rodapé ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="ibm-footer">
-  Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
-  Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
-  <a href="https://github.com/samuel2k6/Projeto-Anti-fraude" target="_blank"
-     style="color:#0f62fe;text-decoration:none">
-    GitHub ↗
-  </a>
-</div>
-""", unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="ibm-footer">
+        Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
+        Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
+
+        <a
+            href="https://github.com/samuel2k6/Projeto-Anti-fraude"
+            target="_blank"
+            style="color:#0f62fe;text-decoration:none"
+        >
+            GitHub ↗
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
