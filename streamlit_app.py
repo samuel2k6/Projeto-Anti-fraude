@@ -332,7 +332,11 @@ with st.sidebar:
             "valor": 130.0,
             "categoria": "Supermercados",
             "cidade": "Porto Alegre",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "estado": "RS",
+            "pais": "BR",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S-03:00"),
+            "fuso_horario": "America/Sao_Paulo",
             "latitude": -30.0346,
             "longitude": -51.2177,
         },
@@ -342,7 +346,11 @@ with st.sidebar:
             "valor": 4500.0,
             "categoria": "Eletrônicos",
             "cidade": "São Paulo",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "estado": "SP",
+            "pais": "BR",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S-03:00"),
+            "fuso_horario": "America/Sao_Paulo",
             "latitude": -23.5505,
             "longitude": -46.6333,
         },
@@ -352,7 +360,11 @@ with st.sidebar:
             "valor": 1250.0,
             "categoria": "Restaurante / Alimentação",
             "cidade": "Tóquio",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "estado": "Tóquio-to",
+            "pais": "JP",
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            "fuso_horario": "Asia/Tokyo",
             "latitude": 35.6762,
             "longitude": 139.6503,
         },
@@ -362,7 +374,11 @@ with st.sidebar:
             "valor": 8900.0,
             "categoria": "Joalherias",
             "cidade": "Rio de Janeiro",
-            "timestamp": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%S"),
+            "estado": "RJ",
+            "pais": "BR",
+            "timestamp": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "data_hora_local": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%S-03:00"),
+            "fuso_horario": "America/Sao_Paulo",
             "latitude": -22.9068,
             "longitude": -43.1729,
         },
@@ -377,10 +393,18 @@ with st.sidebar:
                     "associado_id": "demo_gps",
                     "valor": 187.0,
                     "categoria": "Supermercados",
+                    "cidade": "Porto Alegre",
+                    "estado": "RS",
+                    "pais": "BR",
                     "timestamp": datetime.now().replace(
                         hour=datetime.now().hour,
                         minute=max(0, datetime.now().minute - 15)
-                    ).strftime("%Y-%m-%dT%H:%M:%S"),
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "data_hora_local": datetime.now().replace(
+                        hour=datetime.now().hour,
+                        minute=max(0, datetime.now().minute - 15)
+                    ).strftime("%Y-%m-%dT%H:%M:%S-03:00"),
+                    "fuso_horario": "America/Sao_Paulo",
                     "latitude": -30.0346,
                     "longitude": -51.2177,
                 }]
@@ -566,8 +590,66 @@ else:
 
         st.write("")
 
+        # ── Estado, País e Fuso ───────────────────────────────────────────────
+        st.markdown("**🗺️ Localização e Fuso Horário**")
+
+        loc_col1, loc_col2, loc_col3 = st.columns(3)
+
+        with loc_col1:
+            estado = st.text_input(
+                "Estado / UF",
+                value=(_fill.get("estado", "RS") if _fill else "RS"),
+                placeholder="ex: RS, SP, RJ"
+            )
+
+        with loc_col2:
+            pais = st.text_input(
+                "País (ISO)",
+                value=(_fill.get("pais", "BR") if _fill else "BR"),
+                placeholder="ex: BR, JP, US"
+            )
+
+        with loc_col3:
+            fuso_horario = st.text_input(
+                "Fuso Horário",
+                value=(_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo"),
+                placeholder="ex: America/Sao_Paulo"
+            )
+
+        st.write("")
+
+        # ── Data e hora local ─────────────────────────────────────────────────
+        st.markdown("**🕐 Data e Hora Local da Transação**")
+
+        dt_col1, dt_col2 = st.columns(2)
+
+        with dt_col1:
+            data_local = st.date_input(
+                "Data local",
+                value=(
+                    datetime.fromisoformat(
+                        _fill["data_hora_local"].split("T")[0]
+                    ).date()
+                    if _fill and _fill.get("data_hora_local") else datetime.now().date()
+                )
+            )
+
+        with dt_col2:
+            hora_local = st.time_input(
+                "Hora local",
+                value=(
+                    datetime.fromisoformat(
+                        _fill["data_hora_local"][:19]
+                    ).time()
+                    if _fill and _fill.get("data_hora_local") else datetime.now().time()
+                ),
+                step=60
+            )
+
+        st.write("")
+
         # ── Coordenadas geográficas ───────────────────────────────────────────
-        st.markdown("**📍 Localização da Transação**")
+        st.markdown("**📍 Coordenadas GPS**")
 
         coord_col1, coord_col2 = st.columns(2)
 
@@ -607,13 +689,29 @@ else:
     # ── Processamento da transação ────────────────────────────────────────────
     if submitted:
 
+        # ── Monta data/hora local com offset do fuso ──────────────────────────
+        _offset = {
+            "America/Sao_Paulo": "-03:00", "America/Fortaleza": "-03:00",
+            "America/Manaus": "-04:00",    "America/Rio_Branco": "-05:00",
+            "America/Noronha": "-02:00",   "Asia/Tokyo": "+09:00",
+            "Europe/London": "+00:00",     "America/New_York": "-05:00",
+            "America/Los_Angeles": "-08:00",
+        }.get(fuso_horario.strip(), "-03:00")
+        data_hora_local_str = (
+            f"{data_local.isoformat()}T{hora_local.strftime('%H:%M:%S')}{_offset}"
+        )
+
         tx = {
             "transacao_id": f"tx-{int(time.time() * 1000)}",
             "associado_id": assoc_id.strip() or "demo_user",
             "valor": valor,
             "categoria": categoria,
-            "cidade": cidade,
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "cidade": cidade.strip(),
+            "estado": estado.strip(),
+            "pais": pais.strip().upper(),
+            "fuso_horario": fuso_horario.strip(),
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "data_hora_local": data_hora_local_str,
             "latitude": lat,
             "longitude": lon,
         }
@@ -626,15 +724,19 @@ else:
             .replace("X", ".")
         )
 
+        # ── Localização legível para exibição no chat ─────────────────────────
+        loc_partes = [p for p in [cidade.strip(), estado.strip(), pais.strip().upper()] if p]
+        loc_txt = ", ".join(loc_partes) if loc_partes else "local não informado"
+
         # ── Registra mensagem do associado ────────────────────────────────────
         _add_msg(
             "user",
             f"📤 Analisar transação: "
             f"<strong>{valor_fmt}</strong> "
-            f"em <strong>{categoria}</strong> — {cidade}<br>"
+            f"em <strong>{categoria}</strong> — {loc_txt}<br>"
             f"<span style='font-size:0.82rem;opacity:0.8'>"
             f"Associado: {tx['associado_id']} &nbsp;·&nbsp; "
-            f"{datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            f"{data_local.strftime('%d/%m/%Y')} às {hora_local.strftime('%H:%M')} ({fuso_horario.strip() or 'UTC'})"
             f"</span>"
         )
 
@@ -697,18 +799,18 @@ else:
 
 st.markdown(
     """
-    <div class="ibm-footer">
-        Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
-        Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
-
-        <a
-            href="https://github.com/samuel2k6/Projeto-Anti-fraude"
-            target="_blank"
-            style="color:#0f62fe;text-decoration:none"
-        >
-            GitHub ↗
-        </a>
-    </div>
+<div class="ibm-footer">
+    Sicredi · AI Experiential Learning Lab 2026
+    &nbsp;|&nbsp;
+    Motor MCP local · IBM watsonx Orchestrate (simulação)
+    &nbsp;|&nbsp;
+    <a href="https://github.com/samuel2k6/Projeto-Anti-fraude"
+       target="_blank"
+       rel="noopener noreferrer"
+       style="color:#0f62fe;text-decoration:none">
+       GitHub ↗
+    </a>
+</div>
     """,
     unsafe_allow_html=True
 )

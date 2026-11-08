@@ -60,7 +60,7 @@
         { "condicao": "velocidade_kmh > 900 AND velocidade_kmh <= 1200", "sub_score": 0.80 },
         { "condicao": "velocidade_kmh > 600 AND velocidade_kmh <= 900", "sub_score": 0.60 }
       ],
-      "explicacao_template": "Transação em {cidade_nova} ({pais_novo}) a {distancia_km}km da última localização conhecida ({cidade_anterior}). Velocidade implícita: {velocidade_kmh} km/h — fisicamente impossível.",
+      "explicacao_template": "Transação em {cidade_nova}, {estado_novo} ({pais_novo}) a {distancia_km}km da última localização conhecida ({cidade_anterior}, {estado_anterior}). Data/hora local: {data_hora_local}. Velocidade implícita: {velocidade_kmh} km/h — fisicamente impossível.",
       "acoes_adicionais": ["solicitar_confirmacao_associado", "registrar_localizacao_suspeita"]
     },
     {
@@ -123,7 +123,7 @@
         { "condicao": "horario_atipico = true AND categoria_incomum = false", "sub_score": 0.40 },
         { "condicao": "horario_atipico = false AND categoria_incomum = true", "sub_score": 0.25 }
       ],
-      "explicacao_template": "Transação às {hora} ({dia_semana}) em categoria '{categoria}' — fora do padrão histórico de uso do associado (horário típico: {horario_usual}).",
+      "explicacao_template": "Transação em {cidade}, {estado} ({pais}) às {hora} ({dia_semana}) — data/hora local: {data_hora_local} ({fuso_horario}) — categoria '{categoria}' fora do padrão histórico de uso do associado (horário típico: {horario_usual}).",
       "acoes_adicionais": ["registrar_para_analise_comportamental"]
     }
   ],

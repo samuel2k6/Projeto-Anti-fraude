@@ -38,6 +38,7 @@ if hasattr(sys.stderr, "reconfigure"):
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "mcp_antifraude"))
+sys.path.insert(0, str(ROOT / ".bob"))   # expõe o pacote `orchestration`
 
 # ── Mock do FastMCP (evita blocking de stdin ao importar server.py) ──────────
 

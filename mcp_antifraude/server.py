@@ -155,6 +155,97 @@ def _parse_ts(ts: str) -> datetime:
 
 
 # ---------------------------------------------------------------------------
+# Helpers de enriquecimento de localização e data/hora
+# ---------------------------------------------------------------------------
+
+def _nivelar_localizacao(transacao: dict[str, Any]) -> dict[str, Any]:
+    """
+    Retorna uma cópia da transação com os campos de localização nivelados.
+
+    Se existir um sub-objeto ``transacao["localizacao"]`` (formato datasets),
+    seus campos (latitude, longitude, cidade, estado, pais) são promovidos ao
+    nível raiz sem sobrescrever valores já presentes.
+    """
+    loc_aninhada: dict[str, Any] = transacao.get("localizacao") or {}
+    if not loc_aninhada:
+        return transacao  # já está plano — retorna sem copiar
+    plana = dict(transacao)
+    for campo in ("latitude", "longitude", "cidade", "estado", "pais"):
+        if campo not in plana and campo in loc_aninhada:
+            plana[campo] = loc_aninhada[campo]
+    return plana
+
+
+def _resumo_localizacao(transacao: dict[str, Any]) -> str:
+    """
+    Retorna uma string legível com a localização da transação,
+    incluindo cidade, estado e país quando disponíveis.
+
+    Exemplos de saída:
+      "Porto Alegre, RS, BR"
+      "Tóquio, JP"
+      "Lat -23.5505, Lon -46.6333"
+      ""   (quando nenhum dado geográfico está presente)
+    """
+    partes: list[str] = []
+    cidade = transacao.get("cidade", "")
+    estado = transacao.get("estado", "")
+    pais   = transacao.get("pais", "")
+
+    if cidade:
+        partes.append(str(cidade))
+    if estado:
+        partes.append(str(estado))
+    if pais:
+        partes.append(str(pais))
+
+    if partes:
+        return ", ".join(partes)
+
+    # Fallback para coordenadas brutas
+    lat = transacao.get("latitude")
+    lon = transacao.get("longitude")
+    if lat is not None and lon is not None:
+        try:
+            return f"Lat {float(lat):.4f}, Lon {float(lon):.4f}"
+        except (TypeError, ValueError):
+            pass
+
+    return ""
+
+
+def _formatar_data_hora(transacao: dict[str, Any]) -> str:
+    """
+    Retorna a data e hora formatadas para exibição ao associado e analistas.
+
+    Prioriza ``data_hora_local`` (hora no fuso local da transação) quando
+    disponível; caso contrário usa ``timestamp`` (UTC).
+
+    Formato de saída: "DD/MM/AAAA às HH:MM  (fuso_horario)"
+    Exemplo: "01/11/2026 às 10:15  (America/Sao_Paulo)"
+             "01/11/2026 às 10:15 UTC"
+    """
+    # Prefere o horário local ao UTC
+    ts_str = transacao.get("data_hora_local") or transacao.get("timestamp", "")
+    fuso   = transacao.get("fuso_horario", "")
+
+    if not ts_str:
+        return ""
+
+    try:
+        # Remove sufixo 'Z' e parseia
+        ts = datetime.fromisoformat(ts_str.rstrip("Z").split("+")[0].split("-")[0]
+                                    if "+" not in ts_str and ts_str.count("-") <= 2
+                                    else ts_str.rstrip("Z"))
+        data_formatada = ts.strftime("%d/%m/%Y às %H:%M")
+    except (ValueError, TypeError):
+        return ts_str  # devolve o valor bruto se não conseguir parsear
+
+    sufixo = f"  ({fuso})" if fuso else "  (UTC)" if not transacao.get("data_hora_local") else ""
+    return data_formatada + sufixo
+
+
+# ---------------------------------------------------------------------------
 # Regras heurísticas
 # ---------------------------------------------------------------------------
 
@@ -168,6 +259,8 @@ def _regra_velocidade_impossivel(
     relação à transação atual é ≤ INTERVALO_MINUTOS e a distância geográfica
     é maior do que o possível nesse intervalo.
     """
+    # Aplana subobjeto "localizacao" antes de acessar os campos
+    transacao = _nivelar_localizacao(transacao)
     lat_atual = transacao.get("latitude")
     lon_atual = transacao.get("longitude")
 
@@ -183,6 +276,7 @@ def _regra_velocidade_impossivel(
         return False, ""
 
     for tx in historico:
+        tx = _nivelar_localizacao(tx)
         if "latitude" not in tx or "longitude" not in tx:
             continue
         try:
@@ -196,9 +290,16 @@ def _regra_velocidade_impossivel(
         # Velocidade média necessária (km/h)
         velocidade = dist_km / (diff_min / 60.0) if diff_min > 0 else float("inf")
         if velocidade > VELOCIDADE_IMPOSSIVEL_KM * 2:  # > 600 km/h → inviável
+            # Monta descrição de localização anterior (cidade/estado/país quando disponível)
+            loc_ant = _resumo_localizacao(tx)
+            loc_ant_txt = f" ({loc_ant})" if loc_ant else ""
+            # Monta descrição de localização atual
+            loc_atu = _resumo_localizacao(transacao)
+            loc_atu_txt = f" ({loc_atu})" if loc_atu else ""
             detalhe = (
                 f"Distância de {dist_km:.1f} km em {diff_min:.1f} min "
-                f"({velocidade:.0f} km/h) em relação à transação {tx['transacao_id']}"
+                f"({velocidade:.0f} km/h) entre a transação {tx['transacao_id']}"
+                f"{loc_ant_txt} e esta compra{loc_atu_txt}"
             )
             return True, detalhe
 
@@ -279,19 +380,26 @@ def analisar_risco_transacao(transacao_json: str) -> str:
     - associado_id  (str)
     - valor         (float)
     - categoria     (str)
-    - timestamp     (str ISO-8601, ex: "2026-11-02T23:45:00")
+    - timestamp     (str ISO-8601 em UTC, ex: "2026-11-02T23:45:00Z")
 
-    Campos opcionais (necessários para Regra 1):
-    - latitude      (float)
-    - longitude     (float)
+    Campos opcionais — enriquecem a análise e as mensagens ao associado:
+    - latitude        (float)  — coordenada geográfica
+    - longitude       (float)  — coordenada geográfica
+    - cidade          (str)    — nome da cidade da transação, ex: "Porto Alegre"
+    - estado          (str)    — sigla do estado/UF, ex: "RS"
+    - pais            (str)    — código ISO 3166-1 alpha-2, ex: "BR" ou "JP"
+    - data_hora_local (str)    — data e hora no fuso do local, ex: "2026-11-02T20:45:00-03:00"
+    - fuso_horario    (str)    — fuso IANA, ex: "America/Sao_Paulo"
 
     Retorna um JSON com:
-    - transacao_id   : identificador da transação analisada
-    - associado_id   : identificador do associado
-    - score_risco    : inteiro de 0 (sem risco) a 100 (altíssimo risco)
-    - nivel_risco    : "BAIXO" | "MEDIO" | "ALTO" | "CRITICO"
-    - regras_violadas: lista de objetos {regra, descricao, detalhe}
-    - historico_usado: número de transações históricas consideradas
+    - transacao_id    : identificador da transação analisada
+    - associado_id    : identificador do associado
+    - score_risco     : inteiro de 0 (sem risco) a 100 (altíssimo risco)
+    - nivel_risco     : "BAIXO" | "MEDIO" | "ALTO" | "CRITICO"
+    - regras_violadas : lista de objetos {regra, descricao, detalhe}
+    - historico_usado : número de transações históricas consideradas
+    - localizacao_resumo : string legível com cidade/estado/país (quando disponível)
+    - data_hora_exibicao : string formatada para exibição ao associado e analistas
     """
     # --- parse ---
     try:
@@ -388,6 +496,9 @@ def analisar_risco_transacao(transacao_json: str) -> str:
     else:
         nivel = "CRITICO"
 
+    # Aplana localizacao aninhada para preencher localizacao_resumo e data_hora_exibicao
+    transacao_plana = _nivelar_localizacao(transacao)
+
     resultado = {
         "transacao_id": transacao["transacao_id"],
         "associado_id": assoc_id,
@@ -395,6 +506,8 @@ def analisar_risco_transacao(transacao_json: str) -> str:
         "nivel_risco": nivel,
         "regras_violadas": regras_violadas,
         "historico_usado": len(historico),
+        "localizacao_resumo": _resumo_localizacao(transacao_plana),
+        "data_hora_exibicao": _formatar_data_hora(transacao_plana),
     }
 
     # Registra a transação no histórico para análises futuras na mesma sessão
@@ -533,11 +646,13 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
     ---------
     resultado_analise_json : str
         JSON retornado por `analisar_risco_transacao`. Campos esperados:
-        - transacao_id    (str)
-        - associado_id    (str)
-        - score_risco     (int,  0–100)
-        - nivel_risco     (str)
-        - regras_violadas (list) — cada item com "regra" e "detalhe"
+        - transacao_id        (str)
+        - associado_id        (str)
+        - score_risco         (int,  0–100)
+        - nivel_risco         (str)
+        - regras_violadas     (list) — cada item com "regra" e "detalhe"
+        - localizacao_resumo  (str, opcional) — "Cidade, UF, País"
+        - data_hora_exibicao  (str, opcional) — "DD/MM/AAAA às HH:MM (fuso)"
 
     Retorna JSON com:
     - transacao_id         : str
@@ -567,6 +682,9 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
     transacao_id: str = dados["transacao_id"]
     associado_id: str = dados["associado_id"]
     regras: list[dict[str, str]] = dados.get("regras_violadas", [])
+    # Campos de enriquecimento de contexto (opcionais)
+    localizacao_resumo: str = dados.get("localizacao_resumo", "")
+    data_hora_exibicao: str = dados.get("data_hora_exibicao", "")
 
     # ── score = 0 → aprovado, sem nenhuma regra disparada ───────────────────
     if score == 0:
@@ -609,19 +727,23 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
             (r["detalhe"] for r in regras if r["regra"] == "VELOCIDADE_IMPOSSIVEL"), ""
         )
         # Extrai distância e tempo do detalhe técnico para humanizar
-        # Formato esperado: "Distância de X km em Y min (Z km/h) em relação à transação TID"
-        dist_txt, tempo_txt = "", ""
+        # Formato esperado: "Distância de X km em Y min (Z km/h) entre a transação TID (Loc1) e esta compra (Loc2)"
+        dist_txt, tempo_txt = "uma grande distância", "pouquíssimo tempo"
         partes = detalhe.split(" ")
         try:
-            dist_txt = f"{partes[2]} km"   # "X km"
-            tempo_txt = f"{partes[4]} minutos"  # "Y min"
+            dist_txt = f"{partes[2]} km"
+            tempo_txt = f"{partes[4]} minutos"
         except IndexError:
-            dist_txt, tempo_txt = "uma grande distância", "pouquíssimo tempo"
+            pass
+
+        # Contexto de localização da compra suspeita (cidade/estado/país)
+        loc_prefixo = f" em {localizacao_resumo}" if localizacao_resumo else ""
 
         paragrafos.append(
-            f"Identificamos que, há muito pouco tempo antes desta compra, seu cartão "
-            f"foi usado em um lugar bem diferente deste. A distância entre os dois locais "
-            f"é de {dist_txt}, e o intervalo entre as duas compras foi de apenas {tempo_txt}. "
+            f"Identificamos que, há muito pouco tempo antes desta compra{loc_prefixo}, "
+            f"seu cartão foi usado em um lugar bem diferente deste. "
+            f"A distância entre os dois locais é de {dist_txt}, e o intervalo entre as "
+            f"duas compras foi de apenas {tempo_txt}. "
             f"Fisicamente, não seria possível estar nos dois lugares nesse espaço de tempo — "
             f"o que levanta a suspeita de que alguém possa estar tentando usar seus dados "
             f"de forma indevida."
@@ -666,8 +788,12 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
         except (ValueError, IndexError):
             pass
 
+        # Usa data_hora_exibicao se disponível para substituir a hora técnica
+        hora_exibir = data_hora_exibicao if data_hora_exibicao else f"às {hora_txt}"
+        loc_sufixo  = f" em {localizacao_resumo}" if localizacao_resumo else ""
+
         paragrafos.append(
-            f"Esta compra foi feita em {categoria_txt} às {hora_txt}, "
+            f"Esta compra foi feita em {categoria_txt}{loc_sufixo} {hora_exibir}, "
             f"que é um horário fora do comum para esse tipo de estabelecimento. "
             f"Compras em joalherias, lojas de eletrônicos e lugares parecidos realizadas "
             f"de madrugada ou em horários muito incomuns costumam ser um sinal de alerta. "
@@ -675,11 +801,23 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
         )
 
     # ── Monta a mensagem final ────────────────────────────────────────────────
+    # Complemento contextual com localização e data/hora quando disponíveis
+    contexto_partes: list[str] = []
+    if localizacao_resumo:
+        contexto_partes.append(f"local: {localizacao_resumo}")
+    if data_hora_exibicao:
+        contexto_partes.append(f"data/hora: {data_hora_exibicao}")
+    contexto_txt = (
+        f" (dados da compra — {', '.join(contexto_partes)})"
+        if contexto_partes else ""
+    )
+
     intro = (
-        "Olá! Identificamos algo diferente na sua conta e precisamos da sua confirmação "
-        "antes de liberar uma compra recente. Não se preocupe — seu cartão não foi bloqueado, "
-        "mas precisamos de um momento da sua atenção.\n\n"
-        "Veja o que chamou nossa atenção:\n\n"
+        f"Olá! Identificamos algo diferente na sua conta e precisamos da sua confirmação "
+        f"antes de liberar uma compra recente{contexto_txt}. "
+        f"Não se preocupe — seu cartão não foi bloqueado, "
+        f"mas precisamos de um momento da sua atenção.\n\n"
+        f"Veja o que chamou nossa atenção:\n\n"
     )
 
     corpo = "\n\n".join(f"• {p}" for p in paragrafos)

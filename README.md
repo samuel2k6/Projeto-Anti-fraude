@@ -19,7 +19,7 @@
 |---|---|
 | 💬 **Demo ao vivo (Streamlit)** | [samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app](https://projeto-anti-fraude-dbxqsevzzagoym2spwhrug.streamlit.app/) |
 
-> **Como fazer o deploy da demo:** veja a seção [8. Instalação e Execução](#8-instalação-e-execução) abaixo, ou acesse o link do Streamlit Cloud diretamente acima.
+> **Como fazer o deploy da demo:** veja a seção [9. Instalação e Execução](#9-instalação-e-execução) abaixo, ou acesse o link do Streamlit Cloud diretamente acima.
 
 ---
 
@@ -32,6 +32,8 @@
 5. [Estrutura de Dados](#5-estrutura-de-dados)
 6. [Regras de Scoring](#6-regras-de-scoring)
 7. [Referências de Arquivos](#7-referências-de-arquivos)
+8. [Changelog](#8-changelog)
+9. [Instalação e Execução](#9-instalação-e-execução)
 
 ---
 
@@ -46,6 +48,7 @@ Desenvolver um sistema de IA Agêntica capaz de **detectar, pontuar e intervir e
 - Recebe eventos de transação via stream (Kafka / API REST)
 - Normaliza campos: valor, categoria, coordenadas GPS, timestamp ISO 8601
 - Enriquece com histórico do associado (últimas 30 transações)
+- **Extrai e nivela campos de localização** do sub-objeto `localizacao` (cidade, estado, país, lat/lon) para o nível raiz — compatível com terminais POS e datasets no formato aninhado
 - **Latência de ingestão:** ≤ 50 ms
 
 #### 🤖 F2 — Agente de Avaliação de Risco (Guardião)
@@ -68,7 +71,9 @@ Desenvolver um sistema de IA Agêntica capaz de **detectar, pontuar e intervir e
 
 #### 📲 F4 — Alerta Preventivo ao Associado (Redutor de Carga)
 - Notificação push com linguagem clara e não-técnica
-- Exemplo: *"Identificamos uma compra de R$ 2.400 em São Paulo. Você está em Porto Alegre. Foi você? [SIM] [NÃO, BLOQUEAR]"*
+- Exemplo: *"Identificamos uma compra de R$ 2.400 em Tóquio, Tóquio-to, JP em 01/11/2026 às 10:31 (Asia/Tokyo). Você estava em Porto Alegre, RS há 16 minutos. Foi você? [SIM] [NÃO, BLOQUEAR]"*
+- Localização exibida como **"Cidade, UF, País"** quando disponível; fallback para coordenadas
+- Data e hora exibidas no **fuso local do estabelecimento** (campo `data_hora_local`), não em UTC
 - Resposta do associado realimenta o modelo (feedback loop)
 - Timeout de 2 minutos para resposta; sem resposta → escala para analista
 
@@ -172,35 +177,60 @@ Veja o arquivo [`architecture.md`](./architecture.md) para o diagrama completo.
 ## 5. Estrutura de Dados
 
 ### Evento de Transação (Entrada)
+
+Todos os campos de localização e data/hora são **opcionais** — a sua presença enriquece a análise e as mensagens ao associado sem quebrar transações que não os forneçam.
+
 ```json
 {
   "associado_id": "string (UUID)",
   "transacao_id": "string (UUID)",
   "valor": "number (BRL, 2 casas decimais)",
   "categoria": "string (MCC code description)",
+  "timestamp": "string (ISO 8601 UTC, ex: '2026-11-02T23:45:00Z')",
+
   "localizacao": {
-    "latitude": "number",
-    "longitude": "number",
-    "cidade": "string",
-    "pais": "string (ISO 3166-1 alpha-2)"
+    "latitude":  "number  — coordenada geográfica do estabelecimento",
+    "longitude": "number  — coordenada geográfica do estabelecimento",
+    "cidade":    "string  — nome da cidade, ex: 'Porto Alegre'",
+    "estado":    "string  — sigla do estado/UF ou subdivisão, ex: 'RS'",
+    "pais":      "string  — ISO 3166-1 alpha-2, ex: 'BR'"
   },
-  "timestamp": "string (ISO 8601)",
-  "score_suspeito_esperado": "number [0.0 – 1.0]"
+
+  "data_hora_local": "string (ISO 8601 com offset, ex: '2026-11-02T20:45:00-03:00')",
+  "fuso_horario":    "string (IANA tz, ex: 'America/Sao_Paulo')",
+
+  "score_suspeito_esperado": "number [0.0 – 1.0]  — usado apenas em testes"
 }
 ```
 
+> **Compatibilidade:** campos `cidade`, `estado`, `pais`, `latitude` e `longitude` também são aceitos diretamente no nível raiz (fora de `localizacao`). O motor nivela automaticamente via `_nivelar_localizacao()`.
+
 ### Resposta do Motor de Decisão (Saída)
+
 ```json
 {
-  "transacao_id": "string",
-  "decisao": "APROVADA | ALERTA | CONFIRMAR_ASSOCIADO | BLOQUEADA",
-  "score_final": "number [0.0 – 1.0]",
-  "fatores_risco": ["string"],
-  "acao_tomada": "string",
-  "timestamp_decisao": "string (ISO 8601)",
-  "latencia_ms": "number"
+  "transacao_id":       "string",
+  "associado_id":       "string",
+  "score_risco":        "integer [0–100]",
+  "nivel_risco":        "BAIXO | MEDIO | ALTO | CRITICO",
+  "regras_violadas":    [{"regra": "string", "descricao": "string", "detalhe": "string"}],
+  "historico_usado":    "integer — nº de transações históricas consultadas",
+  "localizacao_resumo": "string — ex: 'Porto Alegre, RS, BR' (legível para analistas e push)",
+  "data_hora_exibicao": "string — ex: '02/11/2026 às 20:45  (America/Sao_Paulo)'"
 }
 ```
+
+### Campos novos na versão atual
+
+| Campo | Onde é lido | Onde aparece na saída |
+|---|---|---|
+| `cidade` | Transação (raiz ou `localizacao{}`) | `localizacao_resumo`, detalhe da regra GPS, mensagem push |
+| `estado` | Transação (raiz ou `localizacao{}`) | `localizacao_resumo`, detalhe da regra GPS, mensagem push |
+| `pais` | Transação (raiz ou `localizacao{}`) | `localizacao_resumo`, detalhe da regra GPS |
+| `data_hora_local` | Transação (raiz) | `data_hora_exibicao`, parágrafo PERFIL_INCOMUM |
+| `fuso_horario` | Transação (raiz) | `data_hora_exibicao` |
+| `localizacao_resumo` | — (calculado) | Retorno de `analisar_risco_transacao` |
+| `data_hora_exibicao` | — (calculado) | Retorno de `analisar_risco_transacao` |
 
 ---
 
@@ -224,18 +254,64 @@ Veja o arquivo [`fraud_rules.json`](./fraud_rules.json) para as regras completas
 | Arquivo | Descrição |
 |---------|-----------|
 | [`README.md`](./README.md) | Este documento — escopo e requisitos |
-| [`transactions.json`](./transactions.json) | 15 transações fictícias para testes locais |
-| [`architecture.md`](./architecture.md) | Diagrama de arquitetura do sistema |
-| [`fraud_rules.json`](./fraud_rules.json) | Regras e pesos do motor de scoring |
-| [`pyproject.toml`](./pyproject.toml) | Metadados e dependências do projeto (PEP 517) |
-| [`requirements.txt`](./requirements.txt) | Dependências para instalação direta via pip |
+| [`architecture.md`](./architecture.md) | Diagramas de arquitetura do sistema |
+| [`transactions.json`](./transactions.json) | 15 transações fictícias com cidade, estado, país |
+| [`fraud_rules.json`](./fraud_rules.json) | Regras e pesos do motor de scoring (F-001 a F-006) |
+| [`mcp_antifraude/server.py`](./mcp_antifraude/server.py) | Motor de risco principal — MCP Anti-Fraude |
+| [`mcp_motor_decisao/server.py`](./mcp_motor_decisao/server.py) | Motor de decisão com faixas de score |
+| [`mcp_notificacoes/server.py`](./mcp_notificacoes/server.py) | Notificações push/SMS/WhatsApp (simuladas) |
+| [`mcp_lista_negra/server.py`](./mcp_lista_negra/server.py) | Checagem de BINs, MCCs e países suspeitos |
+| [`mcp_historico_associado/server.py`](./mcp_historico_associado/server.py) | Perfil histórico do associado |
+| [`mcp_carding_detector/server.py`](./mcp_carding_detector/server.py) | Detector de ataques de carding (F-001) |
+| [`mcp_server/server.py`](./mcp_server/server.py) | Servidor MCP unificado com pesos ponderados |
+| [`.bob/orchestration/pipeline.py`](./.bob/orchestration/pipeline.py) | Orquestração completa do fluxo de análise |
+| [`.bob/orchestration/agent_flow.py`](./.bob/orchestration/agent_flow.py) | Máquina de estados do agente |
+| [`.bob/orchestration/human_in_the_loop.py`](./.bob/orchestration/human_in_the_loop.py) | HITL — pausa, push, await decisão humana |
+| [`.bob/orchestration/notificacao_push.py`](./.bob/orchestration/notificacao_push.py) | Construção do payload de push com localização |
+| [`.bob/orchestration/skills.py`](./.bob/orchestration/skills.py) | SkillRegistry — catálogo de ferramentas do agente |
+| [`run_tests.py`](./run_tests.py) | Runner unificado — 88 assertions, Prompts 1–7 |
+| [`streamlit_app.py`](./streamlit_app.py) | Demo interativa (chat + painel) |
+| [`pyproject.toml`](./pyproject.toml) | Metadados e dependências (PEP 517) |
+| [`requirements.txt`](./requirements.txt) | Dependências para instalação via pip |
 | [`setup.bat`](./setup.bat) | Instalador automático para Windows |
 | [`setup.sh`](./setup.sh) | Instalador automático para Linux / macOS |
-| [`orchestration/`](./orchestration/) | Pipeline de orquestração do agente anti-fraude |
 
 ---
 
-## 8. Instalação e Execução
+## 8. Changelog
+
+### Localização Enriquecida e Data/Hora Local
+
+**Novas funcionalidades:**
+- Campos `cidade`, `estado`, `pais`, `data_hora_local` e `fuso_horario` aceitos na entrada de transações
+- Função `_nivelar_localizacao()` aplana sub-objeto `localizacao{}` ao nível raiz automaticamente, garantindo retrocompatibilidade com terminais POS e datasets existentes
+- Função `_resumo_localizacao()` gera string legível `"Cidade, UF, País"` para push e analistas
+- Função `_formatar_data_hora()` exibe horário no fuso do estabelecimento (não UTC)
+- Retorno de `analisar_risco_transacao` inclui `localizacao_resumo` e `data_hora_exibicao`
+- Regra GPS (F-002) agora cita cidade+estado de origem e destino no detalhe técnico
+- Mensagens ao associado (`explicar_risco_fraude`) incluem cidade/estado e data/hora local
+- `_extrair_local()` em `notificacao_push.py` prioriza `"Cidade, UF, País"` sobre coordenadas brutas
+- `NotificacaoPush.construir()` nivela automaticamente campos aninhados antes de montar o push
+- Todas os 15 registros de `transactions.json` receberam o campo `"estado"` (UF)
+- Templates de explicação de F-002 e F-005 em `fraud_rules.json` atualizados com `{estado}` e `{data_hora_local}`
+
+**Correções:**
+- `run_tests.py`: adicionado `.bob/` ao `sys.path` para resolver `ModuleNotFoundError: No module named 'orchestration'` nas Suites 4–6
+
+**Resultado de testes:** 88/88 assertions ✅ — Prompts 1 a 7 validados
+
+---
+
+**Resumo Geral:**
+- Motor de risco com 3 regras heurísticas (GPS, Pico de Transação, Perfil Incomum)
+- 7 servidores MCP registrados no IBM Bob
+- Fluxo HITL com asyncio, push e timeout automático
+- 15 transações de demonstração cobrindo F-001, F-002, F-003
+- Suite de testes unificada (Prompts 1–7)
+
+---
+
+## 9. Instalação e Execução
 
 ### Pré-requisitos
 

@@ -89,12 +89,23 @@ class NotificacaoPush:
 
         Parâmetros
         ----------
-        transacao  : dict com valor, categoria, latitude/longitude
+        transacao  : dict com valor, categoria, latitude/longitude e,
+                     opcionalmente, cidade/estado/pais (nível raiz ou
+                     aninhados em transacao["localizacao"]).
         explicacao : dict retornado por explicar_risco_fraude
         score_risco: int com o score final calculado
         """
         valor    = transacao.get("valor", 0.0)
-        local    = _extrair_local(transacao)
+
+        # Nivela campos de localização aninhados em "localizacao": {...}
+        # para o nível raiz, sem sobrescrever valores já presentes
+        loc_aninhada: dict[str, Any] = transacao.get("localizacao") or {}
+        transacao_plana = dict(transacao)
+        for campo in ("cidade", "estado", "pais", "latitude", "longitude"):
+            if campo not in transacao_plana and campo in loc_aninhada:
+                transacao_plana[campo] = loc_aninhada[campo]
+
+        local    = _extrair_local(transacao_plana)
         valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
         titulo = (
@@ -134,16 +145,38 @@ class NotificacaoPush:
 def _extrair_local(transacao: dict[str, Any]) -> str:
     """
     Retorna uma string de localização legível para o texto da notificação.
-    Prioriza: cidade > categoria > coordenadas > 'local desconhecido'.
+    Prioriza: cidade+estado+país > cidade > categoria > coordenadas > 'local desconhecido'.
+
+    Exemplos de saída:
+      "Porto Alegre, RS"          (cidade + estado, mesmo país)
+      "Tóquio, JP"                (cidade + país estrangeiro)
+      "Porto Alegre, RS, BR"      (cidade + estado + país)
+      "Restaurante / Alimentação" (fallback para categoria)
+      "Lat -30.0346, Lon -51.2177" (fallback para coordenadas)
     """
-    if cidade := transacao.get("cidade"):
-        return str(cidade)
+    cidade = transacao.get("cidade", "")
+    estado = transacao.get("estado", "")
+    pais   = transacao.get("pais", "")
+
+    if cidade:
+        partes: list[str] = [str(cidade)]
+        if estado:
+            partes.append(str(estado))
+        if pais:
+            partes.append(str(pais))
+        return ", ".join(partes)
+
     if categoria := transacao.get("categoria"):
         return str(categoria)
+
     lat = transacao.get("latitude")
     lon = transacao.get("longitude")
     if lat is not None and lon is not None:
-        return f"Lat {lat:.4f}, Lon {lon:.4f}"
+        try:
+            return f"Lat {float(lat):.4f}, Lon {float(lon):.4f}"
+        except (TypeError, ValueError):
+            pass
+
     return "local desconhecido"
 
 

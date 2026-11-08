@@ -23,6 +23,7 @@
         "latitude": -30.0346,
         "longitude": -51.2177,
         "cidade": "Porto Alegre",
+        "estado": "RS",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T10:15:22Z",
@@ -38,6 +39,7 @@
         "latitude": -30.0412,
         "longitude": -51.2089,
         "cidade": "Porto Alegre",
+        "estado": "RS",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T17:42:10Z",
@@ -53,6 +55,7 @@
         "latitude": -27.5954,
         "longitude": -48.5480,
         "cidade": "Florianópolis",
+        "estado": "SC",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T20:30:05Z",
@@ -68,6 +71,7 @@
         "latitude": -29.6869,
         "longitude": -53.8069,
         "cidade": "Santa Maria",
+        "estado": "RS",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T09:05:00Z",
@@ -83,6 +87,7 @@
         "latitude": -27.5954,
         "longitude": -48.5480,
         "cidade": "Florianópolis",
+        "estado": "SC",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T00:05:12Z",
@@ -98,6 +103,7 @@
         "latitude": -25.4284,
         "longitude": -49.2733,
         "cidade": "Curitiba",
+        "estado": "PR",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T14:22:38Z",
@@ -113,6 +119,7 @@
         "latitude": -29.6918,
         "longitude": -53.8010,
         "cidade": "Santa Maria",
+        "estado": "RS",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T07:10:00Z",
@@ -128,6 +135,7 @@
         "latitude": -25.4189,
         "longitude": -49.2781,
         "cidade": "Curitiba",
+        "estado": "PR",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T16:55:14Z",
@@ -143,6 +151,7 @@
         "latitude": -23.5505,
         "longitude": -46.6333,
         "cidade": "São Paulo",
+        "estado": "SP",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T23:47:01Z",
@@ -158,6 +167,7 @@
         "latitude": -27.5954,
         "longitude": -48.5480,
         "cidade": "Florianópolis",
+        "estado": "SC",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T03:22:44Z",
@@ -175,6 +185,7 @@
         "latitude": -22.9068,
         "longitude": -43.1729,
         "cidade": "Rio de Janeiro",
+        "estado": "RJ",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T02:10:05Z",
@@ -198,6 +209,7 @@
         "latitude": 35.6762,
         "longitude": 139.6503,
         "cidade": "Tóquio",
+        "estado": "Tóquio-to",
         "pais": "JP"
       },
       "timestamp": "2026-11-01T10:31:00Z",
@@ -224,6 +236,7 @@
         "latitude": -23.5614,
         "longitude": -46.6558,
         "cidade": "São Paulo",
+        "estado": "SP",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T15:08:33Z",
@@ -247,6 +260,7 @@
         "latitude": -25.4230,
         "longitude": -49.2910,
         "cidade": "Curitiba",
+        "estado": "PR",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T10:05:50Z",
@@ -262,6 +276,7 @@
         "latitude": -29.6869,
         "longitude": -53.8069,
         "cidade": "Santa Maria",
+        "estado": "RS",
         "pais": "BR"
       },
       "timestamp": "2026-11-01T08:30:00Z",
