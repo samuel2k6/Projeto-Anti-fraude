@@ -538,8 +538,7 @@ if st.session_state.aguardando_resp:
             _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
             st.rerun()
 
-/** **/
-    else:
+else:
     # ── Formulário normal de transação ────────────────────────────────────
 
     with st.form("form_transacao", clear_on_submit=False):
