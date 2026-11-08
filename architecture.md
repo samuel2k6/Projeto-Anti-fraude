@@ -8,18 +8,20 @@
 ```mermaid
 graph TB
     subgraph ENTRADA["📥 CAMADA DE INGESTÃO"]
-        POS["💳 Terminal POS / e-Commerce"]
+        POS["💳 Terminal POS / e-Commerce\n(envia cidade, estado, país,\ndata_hora_local, fuso_horario)"]
         STREAM["⚡ Kafka Event Stream"]
         API_GW["🔌 API Gateway (REST)"]
     end
 
     subgraph AGENTE["🤖 AGENTE DE DETECÇÃO — Guardião de Tomada de Decisão"]
         direction TB
+        NORM["🗺️ Normalizador de Localização\n_nivelar_localizacao()\n(aplana localizacao{} → raiz)"]
         ENRICH["🔎 Enriquecedor de Contexto\n(histórico associado + perfil)"]
         RULES["📏 Motor de Regras\nDeterminísticas (F-001 a F-006)"]
         ML["🧠 Modelo ML\n(Gradient Boosting + Features)"]
         SCORE["🎯 Agregador de Score\n(média ponderada 0.0–1.0)"]
-        EXPLAIN["📋 Gerador de Explicação\n(SHAP-like fatores de risco)"]
+        EXPLAIN["📋 Gerador de Explicação\n(linguagem natural c/ cidade/estado/hora local)"]
+        NORM --> ENRICH
         ENRICH --> RULES
         ENRICH --> ML
         RULES --> SCORE
@@ -55,7 +57,7 @@ graph TB
 
     POS --> STREAM
     API_GW --> STREAM
-    STREAM --> ENRICH
+    STREAM --> NORM
     HIST --> ENRICH
     BLACKLIST --> RULES
     MODELO --> ML
@@ -196,6 +198,7 @@ erDiagram
         float ticket_desvio_padrao
         string[] categorias_frequentes
         string[] cidades_frequentes
+        string[] estados_frequentes
         float latitude_habitual
         float longitude_habitual
     }
@@ -208,8 +211,13 @@ erDiagram
         float latitude
         float longitude
         string cidade
+        string estado
         string pais
         datetime timestamp
+        string data_hora_local
+        string fuso_horario
+        string localizacao_resumo
+        string data_hora_exibicao
         float score_suspeito
         string decisao
         int latencia_ms
@@ -251,6 +259,45 @@ erDiagram
 
 ---
 
+## Fluxo de Dados de Localização
+
+```mermaid
+flowchart LR
+    subgraph ENTRADA["Entrada da Transação"]
+        A1["localizacao{}\n  latitude\n  longitude\n  cidade\n  estado\n  pais"]
+        A2["Campos no nível raiz\n  data_hora_local\n  fuso_horario"]
+    end
+
+    subgraph NORM["_nivelar_localizacao()"]
+        B["Promove cidade, estado, pais,\nlatitude, longitude\npara o nível raiz\n(sem sobrescrever)"]
+    end
+
+    subgraph SAIDA["Campos produzidos"]
+        C1["localizacao_resumo\n→ 'Porto Alegre, RS, BR'"]
+        C2["data_hora_exibicao\n→ '01/11/2026 às 10:15\n   (America/Sao_Paulo)'"]
+    end
+
+    subgraph USO["Onde são usados"]
+        D1["Detalhe da regra GPS (F-002)\n'… entre txn-001 (Porto Alegre, RS, BR)\ne esta compra (Tóquio, Tóquio-to, JP)'"]
+        D2["Mensagem ao associado\n(explicar_risco_fraude)"]
+        D3["Payload do push\n(NotificacaoPush.construir)"]
+        D4["Painel do analista\n(localizacao_resumo)"]
+    end
+
+    A1 --> B
+    A2 --> SAIDA
+    B --> C1
+    B --> C2
+    C1 --> D1
+    C1 --> D2
+    C1 --> D3
+    C1 --> D4
+    C2 --> D2
+    C2 --> D3
+```
+
+---
+
 ## Decisões de Arquitetura (ADRs)
 
 ### ADR-001: Stream-first com Kafka
@@ -268,6 +315,14 @@ erDiagram
 ### ADR-004: Timeout de 2 minutos para confirmação do associado
 **Decisão:** Se o associado não responder ao push/SMS em 2 minutos, enviar um alerta orientando o associado a entrar em contato com sua agência Sicredi — sem bloqueio automático.
 **Motivo:** Evitar bloqueios indevidos por falha de conectividade ou atraso na entrega da notificação, preservando a experiência do associado. A agência realiza a validação presencial e aciona os procedimentos cabíveis.
+
+### ADR-005: Campos de localização e data/hora como opcionais
+**Decisão:** `cidade`, `estado`, `pais`, `data_hora_local` e `fuso_horario` são opcionais. Quando ausentes, o motor opera normalmente com coordenadas brutas ou sem contexto geográfico textual.
+**Motivo:** Retrocompatibilidade com terminais POS e integrações existentes que não fornecem esses campos. A análise de risco (lat/lon para Haversine) não depende dos campos textuais — eles servem exclusivamente para enriquecer as mensagens ao associado e ao analista.
+
+### ADR-006: Nivelamento automático do sub-objeto `localizacao`
+**Decisão:** A função `_nivelar_localizacao()` em [`mcp_antifraude/server.py`](./mcp_antifraude/server.py) e a lógica equivalente em [`notificacao_push.py`](./.bob/orchestration/notificacao_push.py) promovem campos aninhados ao nível raiz sem copiar o objeto inteiro.
+**Motivo:** O dataset de testes usa `"localizacao": {…}` aninhado (padrão do projeto), mas a API pública do motor aceita campos no nível raiz. Uma única função de normalização no início do fluxo elimina a necessidade de adaptar cada regra individualmente.
 
 ---
 
