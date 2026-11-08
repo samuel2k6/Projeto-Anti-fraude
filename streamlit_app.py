@@ -538,202 +538,351 @@ if st.session_state.aguardando_resp:
             _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
             st.rerun()
 
+/** **/
+    else:
+    # ── Formulário normal de transação ────────────────────────────────────
 
-else:
-    # ── Formulário normal de transação ────────────────────────────────────────
     with st.form("form_transacao", clear_on_submit=False):
 
-        # ── Linha 1: ID Associado | Categoria | Valor ─────────────────────
+        # ── Linha 1: Dados da transação ───────────────────────────────────
 
-    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>📋 Dados da Transação</p>", unsafe_allow_html=True)
-    r1c1, r1c2, r1c3 = st.columns([1.2, 1.8, 1.0])
-    with r1c1:
-        assoc_id = st.text_input(
-            "ID do Associado",
-            value=_fill["associado_id"] if _fill else "demo_user",
-            placeholder="ex: assoc_001",
-        )
-    _cats = [
-        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
-        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
-        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
-        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-        "Streaming / Entretenimento Digital", "Outros",
-    ]
-    with r1c2:
-        categoria = st.selectbox(
-            "Categoria",
-            options=_cats,
-            index=( _cats.index(_fill["categoria"]) if _fill and _fill.get("categoria") in _cats else 0 ),
-        )
-    with r1c3:
-        valor = st.number_input(
-            "Valor (R$)",
-            min_value=0.01,
-            max_value=999999.99,
-            step=10.0,
-            value=float(_fill["valor"]) if _fill else 150.0,
-            format="%.2f",
-        )
-    st.write( )
-
-    # ── Linha 2: Cidade | Estado/País | Latitude | Longitude (DINÂMICA) ──────────
-    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>", unsafe_allow_html=True)
-    _OPCOES_LOCAL = _OPCOES_ESTADO + [ "🌍 Internacional" ]
-    _fill_is_intl = ( _fill and not _fill.get("estado") and str(_fill.get("pais", "BR")).upper() not in ( "", "BR" ) )
-    if _fill_is_intl:
-        _fill_opcao_local = "🌍 Internacional"
-    else:
-        _fill_estado = _fill.get("estado") if _fill else None
-        if not _fill_estado and _fill and _fill.get("latitude") and _fill.get("longitude"):
-            _fill_estado = _estado_da_coordenada( float(_fill["latitude"]), float(_fill["longitude"]) )
-        _fill_estado = _fill_estado or "RS"
-        _fill_opcao_local = next( (o for o in _OPCOES_ESTADO if o.startswith(_fill_estado + " —")), _OPCOES_ESTADO[0] )
-
-    r2c1, r2c2, r2c3, r2c4 = st.columns([1.4, 1.6, 1.0, 1.0])
-    with r2c1:
-        cidade = st.text_input("Cidade", value=_fill.get("cidade", "") if _fill else "", placeholder="ex: Porto Alegre")
-    with r2c2:
-        local_opcao = st.selectbox(
-            "Estado / País",
-            options=_OPCOES_LOCAL,
-            index=_OPCOES_LOCAL.index(_fill_opcao_local),
-            help="Estado BR (lat/lon automáticos) ou 🌍 Internacional para coordenadas livres.",
+        st.markdown(
+            "<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>📋 Dados da Transação</p>",
+            unsafe_allow_html=True
         )
 
-    _is_intl = local_opcao == "🌍 Internacional"
-    if _is_intl:
-        estado_sigla = ""
-        _lat_def = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else 48.8566
-        _lon_def = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else 2.3522
-        _pais_def = str(_fill.get("pais", "FR")).upper() if (_fill and _fill.get("pais")) else "FR"
-    else:
-        estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
-        _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
-        _pais_def = "BR"
+        r1c1, r1c2, r1c3 = st.columns([1.2, 1.8, 1.0])
 
-    with r2c3:
-        lat = st.number_input(
-            "Latitude",
-            value=_lat_def,
-            format="%.4f",
-            step=0.0001,
-            help="Automático para BR; editável para Internacional.",
-            key=f"lat_input_{local_opcao}"
+        with r1c1:
+            assoc_id = st.text_input(
+                "ID do Associado",
+                value=_fill["associado_id"] if _fill else "demo_user",
+                placeholder="ex: assoc_001",
+            )
+
+        _cats = [
+            "Supermercados", "Restaurantes", "Farmácias",
+            "Postos de Combustível", "Eletrônicos", "Joalherias",
+            "Artigos de Luxo", "Casas de Câmbio", "Cassinos",
+            "Apostas", "Restaurante / Alimentação",
+            "Transferência Financeira", "E-commerce / Eletrônicos",
+            "Vestuário / Moda", "Educação / Ensino",
+            "Streaming / Entretenimento Digital", "Outros",
+        ]
+
+        with r1c2:
+            categoria = st.selectbox(
+                "Categoria",
+                options=_cats,
+                index=(
+                    _cats.index(_fill["categoria"])
+                    if _fill and _fill.get("categoria") in _cats
+                    else 0
+                ),
+            )
+
+        with r1c3:
+            valor = st.number_input(
+                "Valor (R$)",
+                min_value=0.01,
+                max_value=999999.99,
+                step=10.0,
+                value=float(_fill["valor"]) if _fill else 150.0,
+                format="%.2f",
+            )
+
+        # ── Linha 2: Localização ──────────────────────────────────────────
+
+        st.markdown(
+            "<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>",
+            unsafe_allow_html=True
         )
-    with r2c4:
-        lon = st.number_input(
-            "Longitude",
-            value=_lat_def if _is_intl else _lon_def, # Ajuste para garantir sincronismo
-            format="%.4f",
-            step=0.0001,
-            help="Automático para BR; editável para Internacional.",
-            key=f"lon_input_{local_opcao}"
+
+        _OPCOES_LOCAL = _OPCOES_ESTADO + ["🌍 Internacional"]
+
+        _fill_is_intl = (
+            _fill
+            and not _fill.get("estado")
+            and str(_fill.get("pais", "BR")).upper() not in ("", "BR")
         )
 
-    if _is_intl:
-        pais_intl = st.text_input(
-            "País (ISO-2)",
-            value=_pais_def,
-            placeholder="ex: JP, AR, US, PT",
-            max_chars=2,
-            help="Código ISO 3166-1 alpha-2. Janela GPS crítica: < 48h para internacionais.",
-        ).upper().strip() or "XX"
-    else:
-        pais_intl = "BR"
-    st.write( )
+        if _fill_is_intl:
+            _fill_opcao_local = "🌍 Internacional"
+        else:
+            _fill_estado = _fill.get("estado") if _fill else None
 
-    # ── Linha 3: Data | Hora local ───────────────────────────────────────────────
-    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🕐 Data e Hora Local da Transação</p>", unsafe_allow_html=True)
-    _fill_ts = _fill.get("timestamp", "") if _fill else ""
-    try:
-        _fill_dt = datetime.fromisoformat(_fill_ts[:19]) if _fill_ts else datetime.now()
-    except (ValueError, TypeError):
-        _fill_dt = datetime.now()
+            if (
+                not _fill_estado
+                and _fill
+                and _fill.get("latitude") is not None
+                and _fill.get("longitude") is not None
+            ):
+                _fill_estado = _estado_da_coordenada(
+                    float(_fill["latitude"]),
+                    float(_fill["longitude"])
+                )
 
-    r3c1, r3c2, r3c3 = st.columns([1.2, 1.0, 1.8])
-    with r3c1:
-        data_local = st.date_input("Data local", value=_fill_dt.date())
-    with r3c2:
-        hora_local = st.time_input("Hora local", value=_fill_dt.time(), step=60)
-    with r3c3:
-        fuso_horario = st.text_input(
-            "Fuso Horário",
-            value=_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo",
-            placeholder="ex: America/Sao_Paulo, Asia/Tokyo",
-            help="Fuso IANA. Usado para exibição da data/hora ao associado.",
+            _fill_estado = _fill_estado or "RS"
+
+            _fill_opcao_local = next(
+                (
+                    o for o in _OPCOES_ESTADO
+                    if o.startswith(_fill_estado + " —")
+                ),
+                _OPCOES_ESTADO[0]
+            )
+
+        r2c1, r2c2, r2c3, r2c4 = st.columns(
+            [1.4, 1.6, 1.0, 1.0]
         )
-    st.write( )
 
-    submitted = st.button(
-        "🔍 Analisar Transação",
-        use_container_width=True,
-        type="primary",
-    )      
-                
-        
+        with r2c1:
+            cidade = st.text_input(
+                "Cidade",
+                value=_fill.get("cidade", "") if _fill else "",
+                placeholder="ex: Porto Alegre"
+            )
+
+        with r2c2:
+            local_opcao = st.selectbox(
+                "Estado / País",
+                options=_OPCOES_LOCAL,
+                index=_OPCOES_LOCAL.index(_fill_opcao_local),
+                help="Estado BR (lat/lon automáticos) ou Internacional para coordenadas livres."
+            )
+
+        _is_intl = local_opcao == "🌍 Internacional"
+
+        if _is_intl:
+            estado_sigla = ""
+
+            _lat_def = (
+                float(_fill["latitude"])
+                if _fill and _fill.get("latitude") is not None
+                else 48.8566
+            )
+
+            _lon_def = (
+                float(_fill["longitude"])
+                if _fill and _fill.get("longitude") is not None
+                else 2.3522
+            )
+
+            _pais_def = (
+                str(_fill.get("pais", "FR")).upper()
+                if _fill and _fill.get("pais")
+                else "FR"
+            )
+
+        else:
+            estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
+
+            _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
+
+            _pais_def = "BR"
+
+        with r2c3:
+            lat = st.number_input(
+                "Latitude",
+                value=_lat_def,
+                format="%.4f",
+                step=0.0001,
+                help="Automático para BR; editável para Internacional.",
+                key=f"lat_input_{local_opcao}"
+            )
+
+        with r2c4:
+            lon = st.number_input(
+                "Longitude",
+                value=_lon_def,
+                format="%.4f",
+                step=0.0001,
+                help="Automático para BR; editável para Internacional.",
+                key=f"lon_input_{local_opcao}"
+            )
+
+        if _is_intl:
+            pais_intl = st.text_input(
+                "País (ISO-2)",
+                value=_pais_def,
+                placeholder="ex: JP, AR, US, PT",
+                max_chars=2,
+                help="Código ISO 3166-1 alpha-2."
+            ).upper().strip() or "XX"
+        else:
+            pais_intl = "BR"
+
+        # ── Linha 3: Data e hora ──────────────────────────────────────────
+
+        st.markdown(
+            "<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🕐 Data e Hora Local da Transação</p>",
+            unsafe_allow_html=True
+        )
+
+        _fill_ts = _fill.get("timestamp", "") if _fill else ""
+
+        try:
+            _fill_dt = (
+                datetime.fromisoformat(_fill_ts[:19])
+                if _fill_ts
+                else datetime.now()
+            )
+        except (ValueError, TypeError):
+            _fill_dt = datetime.now()
+
+        r3c1, r3c2, r3c3 = st.columns([1.2, 1.0, 1.8])
+
+        with r3c1:
+            data_local = st.date_input(
+                "Data local",
+                value=_fill_dt.date()
+            )
+
+        with r3c2:
+            hora_local = st.time_input(
+                "Hora local",
+                value=_fill_dt.time(),
+                step=60
+            )
+
+        with r3c3:
+            fuso_horario = st.text_input(
+                "Fuso Horário",
+                value=(
+                    _fill.get("fuso_horario", "America/Sao_Paulo")
+                    if _fill
+                    else "America/Sao_Paulo"
+                ),
+                placeholder="ex: America/Sao_Paulo, Asia/Tokyo",
+                help="Fuso IANA usado para exibição da data/hora."
+            )
+
+        # ── Botão de envio ───────────────────────────────────────────────
+
+        submitted = st.form_submit_button(
+            "🔍 Analisar Transação",
+            use_container_width=True,
+            type="primary",
+        )
+
+    # ── Processamento fora do formulário ─────────────────────────────────
 
     if submitted:
-        # Monta offset a partir do fuso informado
+
         _offset = {
-            "America/Sao_Paulo": "-03:00", "America/Fortaleza": "-03:00",
-            "America/Manaus": "-04:00",    "America/Rio_Branco": "-05:00",
-            "America/Noronha": "-02:00",   "Asia/Tokyo": "+09:00",
-            "Europe/London": "+00:00",     "America/New_York": "-05:00",
+            "America/Sao_Paulo": "-03:00",
+            "America/Fortaleza": "-03:00",
+            "America/Manaus": "-04:00",
+            "America/Rio_Branco": "-05:00",
+            "America/Noronha": "-02:00",
+            "Asia/Tokyo": "+09:00",
+            "Europe/London": "+00:00",
+            "America/New_York": "-05:00",
             "America/Los_Angeles": "-08:00",
         }.get(fuso_horario.strip(), "-03:00")
+
         data_hora_local_str = (
-            f"{data_local.isoformat()}T{hora_local.strftime('%H:%M:%S')}{_offset}"
+            f"{data_local.isoformat()}T"
+            f"{hora_local.strftime('%H:%M:%S')}"
+            f"{_offset}"
         )
 
+        # ── Montagem da transação ────────────────────────────────────────
+
         tx = {
-            "transacao_id": f"tx-{int(time.time()*1000)}",
+            "transacao_id": f"tx-{int(time.time() * 1000)}",
             "associado_id": assoc_id.strip() or "demo_user",
-            "valor":        valor,
-            "categoria":    categoria,
-            "cidade":       cidade or (local_opcao.split(" — ")[-1] if not _is_intl else ""),
+            "valor": valor,
+            "categoria": categoria,
+            "cidade": (
+                cidade
+                or (
+                    local_opcao.split(" — ")[-1]
+                    if not _is_intl
+                    else ""
+                )
+            ),
             "fuso_horario": fuso_horario.strip(),
-            "timestamp":    f"{data_local.isoformat()}T{hora_local.strftime('%H:%M:%S')}",
+            "timestamp": (
+                f"{data_local.isoformat()}T"
+                f"{hora_local.strftime('%H:%M:%S')}"
+            ),
             "data_hora_local": data_hora_local_str,
-            "latitude":     lat,
-            "longitude":    lon,
+            "latitude": lat,
+            "longitude": lon,
         }
+
         if _is_intl:
             tx["pais"] = pais_intl
         else:
             tx["estado"] = estado_sigla
             tx["pais"] = "BR"
 
-        # Mensagem do usuário no chat
-        valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        # ── Mensagem do usuário ──────────────────────────────────────────
+
+        valor_fmt = (
+            f"R$ {valor:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
         cidade_exib = tx.get("cidade", "")
+
         if _is_intl:
             local_exib = f"{cidade_exib} ({pais_intl}) 🌍"
         else:
             local_exib = f"{cidade_exib} ({estado_sigla})"
-        _add_msg("user",
+
+        _add_msg(
+            "user",
             f"📤 Analisar transação: <strong>{valor_fmt}</strong> em "
             f"<strong>{categoria}</strong> — {local_exib}<br>"
-            f"<span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; "
-            f"{data_local.strftime('%d/%m/%Y')} às {hora_local.strftime('%H:%M')} "
+            f"<span style='font-size:0.82rem;opacity:0.8'>"
+            f"Associado: {tx['associado_id']} &nbsp;·&nbsp; "
+            f"{data_local.strftime('%d/%m/%Y')} às "
+            f"{hora_local.strftime('%H:%M')} "
             f"({fuso_horario.strip() or 'UTC'})</span>"
         )
 
-        with st.spinner("Agente analisando..."):
-            analise    = _analisar(tx)
-            explicacao = json.loads(
-                explicar_risco_fraude(json.dumps(analise, ensure_ascii=False))
+        # ── Análise MCP ──────────────────────────────────────────────────
+
+        try:
+            with st.spinner("Agente analisando..."):
+
+                analise = _analisar(tx)
+
+                explicacao = json.loads(
+                    explicar_risco_fraude(
+                        json.dumps(analise, ensure_ascii=False)
+                    )
+                )
+
+            html, role = _construir_mensagem_agente(
+                analise,
+                explicacao
             )
 
-        html, role = _construir_mensagem_agente(analise, explicacao)
-        _add_msg(role, html)
+            _add_msg(role, html)
 
-        # Se crítico: ativa modo HITL
-        if analise["score_risco"] > 70:
-            st.session_state.aguardando_resp = tx["transacao_id"]
-            st.session_state.ultima_analise  = analise
-            _add_msg("system",
-                "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo."
+            # ── Fluxo HITL para risco crítico ────────────────────────────
+
+            if analise["score_risco"] > 70:
+
+                st.session_state.aguardando_resp = tx["transacao_id"]
+
+                st.session_state.ultima_analise = analise
+
+                _add_msg(
+                    "system",
+                    "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo."
+                )
+
+        except Exception as e:
+
+            _add_msg(
+                "block",
+                f"❌ <strong>Erro durante a análise:</strong> {str(e)}"
             )
 
         st.rerun()
