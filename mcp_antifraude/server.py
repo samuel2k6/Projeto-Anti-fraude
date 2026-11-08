@@ -150,6 +150,11 @@ MULTIPLICADOR_PICO = 3.0
 # Funções auxiliares
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# Funções auxiliares (Substitua este trecho no seu server.py)
+# ---------------------------------------------------------------------------
+
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distância em km entre dois pontos geográficos (fórmula de Haversine)."""
     R = 6371.0
@@ -165,7 +170,28 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _parse_ts(ts: str) -> datetime:
-    return datetime.fromisoformat(ts)
+    """
+    Converte strings de timestamp ISO em objetos datetime.
+    Garante que o fuso horário seja removido (.replace(tzinfo=None)) para evitar 
+    erros de 'offset-naive and offset-aware' ao efetuar subtrações matemáticas.
+    """
+    try:
+        # Se for passado uma string no formato do Streamlit com espaço em vez de 'T'
+        if " " in ts and "T" not in ts:
+            # Tenta converter formato amigável "AAAA-MM-DD HH:MM:SS"
+            dt = datetime.strptime(ts.split(".")[0].split("+")[0], "%Y-%m-%d %H:%M:%S")
+        else:
+            dt = datetime.fromisoformat(ts)
+        return dt.replace(tzinfo=None)
+    except Exception:
+        # Fallback genérico caso a string venha em formato regional brasileiro "DD/MM/AAAA HH:MM"
+        try:
+            dt = datetime.strptime(ts, "%d/%m/%Y %H:%M")
+            return dt.replace(tzinfo=None)
+        except Exception:
+            # Retorna o datetime atual sem fuso caso falhe completamente
+            return datetime.now().replace(tzinfo=None)
+
 
 
 # ---------------------------------------------------------------------------
