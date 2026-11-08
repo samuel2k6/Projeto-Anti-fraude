@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 streamlit_app.py — Simulador de Chat do watsonx Orchestrate
 =============================================================
@@ -42,6 +42,61 @@ import server as mcp_server  # type: ignore  (mcp_antifraude/server.py)
 analisar_risco_transacao = mcp_server.analisar_risco_transacao
 explicar_risco_fraude    = mcp_server.explicar_risco_fraude
 
+# Tabela de estados internalizada — server.py não expõe mais ESTADOS_BR
+# Formato: sigla → (nome completo, lat_centro, lon_centro)
+ESTADOS_BR: dict[str, tuple[str, float, float]] = {
+    "AC": ("Acre",                -9.0238,  -70.8120),
+    "AL": ("Alagoas",             -9.5713,  -36.7819),
+    "AM": ("Amazonas",            -4.4197,  -63.5806),
+    "AP": ("Amapá",                1.4102,  -51.7700),
+    "BA": ("Bahia",              -12.5797,  -41.7007),
+    "CE": ("Ceará",               -5.4984,  -39.3206),
+    "DF": ("Distrito Federal",   -15.7801,  -47.9292),
+    "ES": ("Espírito Santo",     -19.1834,  -40.3089),
+    "GO": ("Goiás",              -15.8270,  -49.8362),
+    "MA": ("Maranhão",            -5.4200,  -45.4410),
+    "MG": ("Minas Gerais",       -18.5122,  -44.5550),
+    "MS": ("Mato Grosso do Sul", -20.7722,  -54.7852),
+    "MT": ("Mato Grosso",        -12.6819,  -56.9211),
+    "PA": ("Pará",                -3.4168,  -52.0000),
+    "PB": ("Paraíba",             -7.2399,  -36.7819),
+    "PE": ("Pernambuco",          -8.8137,  -36.9541),
+    "PI": ("Piauí",               -7.7183,  -42.7289),
+    "PR": ("Paraná",             -24.8950,  -51.5490),
+    "RJ": ("Rio de Janeiro",     -22.9068,  -43.1729),
+    "RN": ("Rio Grande do Norte", -5.8127,  -36.2031),
+    "RO": ("Rondônia",           -10.8380,  -63.3430),
+    "RR": ("Roraima",              2.7376,  -62.0751),
+    "RS": ("Rio Grande do Sul",  -30.0346,  -51.2177),
+    "SC": ("Santa Catarina",     -27.4500,  -50.9500),
+    "SE": ("Sergipe",            -10.5741,  -37.3857),
+    "SP": ("São Paulo",          -23.5505,  -46.6333),
+    "TO": ("Tocantins",          -10.1753,  -48.2982),
+}
+
+def _estado_da_coordenada(lat: float, lon: float) -> str:
+    """Retorna a sigla do estado cujo centróide está mais próximo das coordenadas."""
+    import math
+    def _hav(lat1, lon1, lat2, lon2):
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    melhor_sigla, melhor_dist = "RS", float("inf")
+    for sigla, (_, clat, clon) in ESTADOS_BR.items():
+        d = _hav(lat, lon, clat, clon)
+        if d < melhor_dist:
+            melhor_dist = d
+            melhor_sigla = sigla
+    return melhor_sigla
+
+# Lista ordenada para o seletor: "SP — São Paulo", …
+_OPCOES_ESTADO = sorted(
+    [f"{sig} — {nome}" for sig, (nome, _, _) in ESTADOS_BR.items()]
+)
+_SIGLA_DE_OPCAO = {f"{sig} — {nome}": sig for sig, (nome, _, _) in ESTADOS_BR.items()}
+
 # ── Streamlit ─────────────────────────────────────────────────────────────────
 import streamlit as st
 
@@ -54,15 +109,13 @@ st.set_page_config(
 )
 
 # ── CSS customizado (visual watsonx Orchestrate) ──────────────────────────────
-st.markdown(
-    """
+st.markdown("""
 <style>
-/* Fundo geral */
-.stApp {
-    background-color: #f4f4f4;
-}
-/* Cabeçalho do chat */
-.wx-header {
+  /* Fundo geral */
+  .stApp { background-color: #f4f4f4; }
+
+  /* Cabeçalho do chat */
+  .wx-header {
     background: linear-gradient(135deg, #0f62fe 0%, #0043ce 100%);
     color: white;
     padding: 18px 24px;
@@ -71,12 +124,12 @@ st.markdown(
     display: flex;
     align-items: center;
     gap: 12px;
-}
-.wx-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-.wx-header p { margin: 0; font-size: 0.82rem; opacity: 0.85; }
+  }
+  .wx-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  .wx-header p  { margin: 0; font-size: 0.82rem; opacity: 0.85; }
 
-/* Bolhas do chat */
-.msg-user {
+  /* Bolhas do chat */
+  .msg-user {
     background: #0f62fe;
     color: white;
     padding: 12px 16px;
@@ -86,8 +139,8 @@ st.markdown(
     margin-left: auto;
     font-size: 0.93rem;
     line-height: 1.5;
-}
-.msg-agent {
+  }
+  .msg-agent {
     background: white;
     color: #161616;
     padding: 12px 16px;
@@ -97,8 +150,8 @@ st.markdown(
     border: 1px solid #e0e0e0;
     font-size: 0.93rem;
     line-height: 1.55;
-}
-.msg-system {
+  }
+  .msg-system {
     background: #fff3cd;
     color: #664d03;
     padding: 10px 14px;
@@ -108,8 +161,8 @@ st.markdown(
     text-align: center;
     font-size: 0.82rem;
     border: 1px solid #ffc107;
-}
-.msg-block {
+  }
+  .msg-block {
     background: #fff1f1;
     color: #a2191f;
     padding: 12px 16px;
@@ -119,8 +172,8 @@ st.markdown(
     border: 1px solid #ffd7d9;
     font-size: 0.93rem;
     line-height: 1.55;
-}
-.msg-ok {
+  }
+  .msg-ok {
     background: #defbe6;
     color: #044317;
     padding: 12px 16px;
@@ -130,58 +183,28 @@ st.markdown(
     border: 1px solid #a7f0ba;
     font-size: 0.93rem;
     line-height: 1.55;
-}
+  }
 
-/* Badge de score */
-.badge-critico { background:#a2191f; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-.badge-alto { background:#ff832b; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-.badge-medio { background:#f1c21b; color:#161616; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
-.badge-baixo { background:#24a148; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+  /* Badge de score */
+  .badge-critico { background:#a2191f; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+  .badge-alto    { background:#ff832b; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+  .badge-medio   { background:#f1c21b; color:#161616; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
+  .badge-baixo   { background:#24a148; color:white; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; }
 
-/* Rodapé IBM */
-.ibm-footer {
+  /* Rodapé IBM */
+  .ibm-footer {
     text-align: center;
     color: #6f6f6f;
     font-size: 0.75rem;
     margin-top: 32px;
     padding-top: 12px;
     border-top: 1px solid #e0e0e0;
-}
-.chat-area {
-    max-height: 520px;
-    overflow-y: auto;
-    padding: 4px 0;
-}
-[data-testid="stWidgetLabel"] p {
-    color: #393939 !important;
-    font-weight: 500 !important;
-}
-div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"],
-div.lat-lon-row [data-testid="stHorizontalBlock"] {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
-    gap: 0.75rem !important;
-}
-div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) [data-testid="stHorizontalBlock"] > div,
-div.lat-lon-row [data-testid="stHorizontalBlock"] > div {
-    min-width: 0 !important;
-    flex: 1 1 0% !important;
-}
-div[data-testid="stVerticalBlockBorderWrapper"]:has(input[aria-label="Latitude"]) label p,
-div.lat-lon-row label p {
-    font-size: 0.85rem !important;
-    white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+  }
+
+  /* Remove padding extra dos containers de chat */
+  .chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
 </style>
-""",
-    unsafe_allow_html=True,
-)
-
-
+""", unsafe_allow_html=True)
 
 
 # ── Estado da sessão ──────────────────────────────────────────────────────────
@@ -245,9 +268,25 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
     alerta_fp = explicacao.get("alerta_falso_positivo", False)
     requer    = explicacao.get("requer_validacao", False)
 
-    titulo  = explicacao.get("titulo", "")
+    titulo   = explicacao.get("titulo", "")
     mensagem = explicacao.get("mensagem_associado", "").replace("\n", "<br>")
     orient   = explicacao.get("orientacao", "")
+
+    # Contexto enriquecido (novos campos do server.py)
+    loc_resumo  = analise.get("localizacao_resumo", "")
+    dt_exibicao = analise.get("data_hora_exibicao", "")
+    contexto_html = ""
+    if loc_resumo or dt_exibicao:
+        partes = []
+        if loc_resumo:
+            partes.append(f"📍 {loc_resumo}")
+        if dt_exibicao:
+            partes.append(f"🕐 {dt_exibicao}")
+        contexto_html = (
+            f"<div style='font-size:0.82rem;color:#525252;margin:4px 0 8px 0'>"
+            + " &nbsp;·&nbsp; ".join(partes)
+            + "</div>"
+        )
 
     motivos_html = ""
     if regras:
@@ -259,7 +298,8 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
         html = (
             f"✅ <strong>{titulo}</strong><br>"
             f"<span style='font-size:0.87rem;color:#525252'>Análise concluída em {lat} ms "
-            f"— Score: {score}/100 &nbsp;{badge}</span><br><br>"
+            f"— Score: {score}/100 &nbsp;{badge}</span><br>"
+            f"{contexto_html}"
             f"{mensagem}"
         )
     elif alerta_fp:
@@ -268,6 +308,7 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
             f"ℹ️ <strong>{titulo}</strong><br>"
             f"<span style='font-size:0.87rem;color:#525252'>Análise concluída em {lat} ms "
             f"— Score: {score}/100 &nbsp;{badge}</span>"
+            f"{contexto_html}"
             f"{motivos_html}<br><br>"
             f"{mensagem}<br><br>"
             f"<em style='font-size:0.85rem;color:#525252'>{orient}</em>"
@@ -278,6 +319,7 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
             f"⚠️ <strong>{titulo}</strong><br>"
             f"<span style='font-size:0.87rem'>Análise concluída em {lat} ms "
             f"— Score: {score}/100 &nbsp;{badge}</span>"
+            f"{contexto_html}"
             f"{motivos_html}<br><br>"
             f"{mensagem}<br><br>"
             f"<strong style='font-size:0.87rem'>{orient}</strong>"
@@ -286,7 +328,8 @@ def _construir_mensagem_agente(analise: dict, explicacao: dict) -> tuple[str, st
         role = "agent"
         html = (
             f"<strong>{titulo}</strong><br>"
-            f"<span style='font-size:0.87rem;color:#525252'>{lat} ms — Score {score}/100 &nbsp;{badge}</span><br><br>"
+            f"<span style='font-size:0.87rem;color:#525252'>{lat} ms — Score {score}/100 &nbsp;{badge}</span><br>"
+            f"{contexto_html}"
             f"{mensagem}"
         )
 
@@ -318,97 +361,115 @@ def _processar_resposta_hitl(resposta: str, analise: dict, explicacao: dict) -> 
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+    # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🛡️ Agente Anti-Fraude")
     st.markdown("**IBM watsonx Orchestrate** · Sicredi")
     st.divider()
     st.markdown("#### 🧪 Transações de Teste")
     st.caption("Clique para preencher automaticamente")
-    
-    EXEMPLOS = {
-        "✅ Normal — Supermercado": {
-            "transacao_id": "demo-001",
-            "associado_id": "demo_user",
-            "valor": 130.0,
-            "categoria": "Supermercados",
-            "cidade": "Porto Alegre",
-            "estado": "RS",
-            "pais": "BR",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S-03:00"),
-            "fuso_horario": "America/Sao_Paulo",
-            "latitude": -30.0346,
-            "longitude": -51.2177,
-        },
-        "⚠️ Pico de valor — Eletrônicos": {
-            "transacao_id": "demo-002",
-            "associado_id": "demo_user",
-            "valor": 4500.0,
-            "categoria": "Eletrônicos",
-            "cidade": "São Paulo",
-            "estado": "SP",
-            "pais": "BR",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S-03:00"),
-            "fuso_horario": "America/Sao_Paulo",
-            "latitude": -23.5505,
-            "longitude": -46.6333,
-        },
-        "🚨 GPS Impossível — Tóquio": {
-            "transacao_id": "demo-gps",
-            "associado_id": "demo_gps",
-            "valor": 1250.0,
-            "categoria": "Restaurante / Alimentação",
-            "cidade": "Tóquio",
-            "estado": "Tóquio-to",
-            "pais": "JP",
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data_hora_local": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
-            "fuso_horario": "Asia/Tokyo",
-            "latitude": 35.6762,
-            "longitude": 139.6503,
-        },
-        "🚨 Joalheria de madrugada": {
-            "transacao_id": "demo-004",
-            "associado_id": "demo_user",
-            "valor": 8900.0,
-            "categoria": "Joalherias",
-            "cidade": "Rio de Janeiro",
-            "estado": "RJ",
-            "pais": "BR",
-            "timestamp": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data_hora_local": datetime.now().replace(hour=2, minute=30).strftime("%Y-%m-%dT%H:%M:%S-03:00"),
-            "fuso_horario": "America/Sao_Paulo",
-            "latitude": -22.9068,
-            "longitude": -43.1729,
-        },
-    }
 
-    for label, tx in EXEMPLOS.items():
-        if st.button(label, use_container_width=True, key=f"btn_{label[:8]}"):
-            # Para o caso GPS: injeta histórico de Porto Alegre antes
-            if "Tóquio" in label:
-                mcp_server._HISTORICO["demo_gps"] = [{
-                    "transacao_id": "hist-gps",
-                    "associado_id": "demo_gps",
-                    "valor": 187.0,
-                    "categoria": "Supermercados",
-                    "cidade": "Porto Alegre",
-                    "estado": "RS",
-                    "pais": "BR",
-                    "timestamp": datetime.now().replace(
-                        hour=datetime.now().hour,
-                        minute=max(0, datetime.now().minute - 15)
-                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "data_hora_local": datetime.now().replace(
-                        hour=datetime.now().hour,
-                        minute=max(0, datetime.now().minute - 15)
-                    ).strftime("%Y-%m-%dT%H:%M:%S-03:00"),
-                    "fuso_horario": "America/Sao_Paulo",
-                    "latitude": -30.0346,
-                    "longitude": -51.2177,
-                }]
-                st.session_state.historico_mcp["demo_gps"] = mcp_server._HISTORICO["demo_gps"]
+    # Cada entrada: (label, tx_dict, historico_para_injetar_ou_None)
+    # Históricos definem o padrão do associado antes da transação suspeita.
+    _now = datetime.now()
+    from datetime import timedelta as _td
+
+    EXEMPLOS = [
+        # ── 1. Normal — sem fraude ───────────────────────────────────────────
+        (
+            "✅ Normal — Farmácia R$87,43",
+            {
+                "transacao_id": "demo-n0", "associado_id": "demo_n0",
+                "valor": 87.43, "categoria": "Farmácias",
+                "cidade": "Curitiba", "estado": "PR",
+                "timestamp": _now.replace(hour=10, minute=17).strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": -25.4297, "longitude": -49.2716,
+            },
+            None,  # sem histórico → score 0, BAIXO
+        ),
+        # ── 2. Pico de Valor — alerta médio ─────────────────────────────────
+        (
+            "⚠️ Pico de Valor — Eletrônicos 4.6x acima",
+            {
+                "transacao_id": "demo-a1", "associado_id": "demo_a1",
+                "valor": 1847.63, "categoria": "Eletrônicos",
+                "cidade": "Fortaleza", "estado": "CE",
+                "timestamp": _now.replace(hour=16, minute=54).strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": -3.7172, "longitude": -38.5433,
+            },
+            # histórico: 2 compras de eletrônicos no CE, média ~R$405 → 1847 = 4.6x → MÉDIO
+            [
+                {"transacao_id": "ha1a", "associado_id": "demo_a1", "valor": 423.18,
+                 "categoria": "Eletrônicos", "cidade": "Fortaleza", "estado": "CE",
+                 "timestamp": (_now - _td(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+                 "latitude": -3.7172, "longitude": -38.5433},
+                {"transacao_id": "ha1b", "associado_id": "demo_a1", "valor": 387.55,
+                 "categoria": "Eletrônicos", "cidade": "Fortaleza", "estado": "CE",
+                 "timestamp": (_now - _td(days=5)).strftime("%Y-%m-%dT%H:%M:%S"),
+                 "latitude": -3.7172, "longitude": -38.5433},
+            ],
+        ),
+        # ── 3. GPS Impossível Nacional (CRÍTICO, janela < 24h) ───────────────
+        (
+            "🚨 GPS Impossível — SP → AM em 15 min (Nacional)",
+            {
+                "transacao_id": "demo-gn1", "associado_id": "demo_gn1",
+                "valor": 923.50, "categoria": "Eletrônicos",
+                "cidade": "Manaus", "estado": "AM",
+                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": -3.1190, "longitude": -60.0217,
+            },
+            # SP→Manaus ≈ 2.690 km em 15 min → 10.760 km/h → > 600 km/h → CRÍTICO
+            # Janela < 24h nacional ativa (estado=AM)
+            [
+                {"transacao_id": "hgn1a", "associado_id": "demo_gn1", "valor": 189.75,
+                 "categoria": "Supermercados", "cidade": "São Paulo", "estado": "SP",
+                 "timestamp": (_now - _td(minutes=15)).strftime("%Y-%m-%dT%H:%M:%S"),
+                 "latitude": -23.5505, "longitude": -46.6333},
+            ],
+        ),
+        # ── 4. GPS Impossível Internacional (CRÍTICO, janela < 48h) ─────────
+        (
+            "🚨 GPS Impossível — RS → Tóquio em 12 min (Internacional)",
+            {
+                "transacao_id": "demo-f1", "associado_id": "demo_f1",
+                "valor": 1247.83, "categoria": "Restaurante / Alimentação",
+                "cidade": "Tóquio", "pais": "JP",
+                "timestamp": _now.strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": 35.6762, "longitude": 139.6503,
+            },
+            # RS→Tóquio ≈ 18.822 km em 12 min → 94.115 km/h → CRÍTICO
+            # Janela < 48h internacional ativa (pais=JP)
+            [
+                {"transacao_id": "hf1a", "associado_id": "demo_f1", "valor": 143.78,
+                 "categoria": "Supermercados", "cidade": "Porto Alegre", "estado": "RS",
+                 "timestamp": (_now - _td(minutes=12)).strftime("%Y-%m-%dT%H:%M:%S"),
+                 "latitude": -30.0346, "longitude": -51.2177},
+            ],
+        ),
+        # ── 5. Joalheria de Madrugada — perfil incomum (alerta médio) ────────
+        (
+            "⚠️ Joalheria às 03h17 — perfil incomum",
+            {
+                "transacao_id": "demo-a2", "associado_id": "demo_a2",
+                "valor": 7312.49, "categoria": "Joalherias",
+                "cidade": "Rio de Janeiro", "estado": "RJ",
+                "timestamp": _now.replace(hour=3, minute=17).strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": -22.9068, "longitude": -43.1729,
+            },
+            None,  # sem histórico → só PERFIL_INCOMUM, score 25, MÉDIO
+        ),
+    ]
+
+    for i, (label, tx, hist_injectar) in enumerate(EXEMPLOS):
+        if st.button(label, use_container_width=True, key=f"btn_exemplo_{i}"):
+            assoc = tx["associado_id"]
+            if hist_injectar is not None:
+                mcp_server._HISTORICO[assoc] = hist_injectar
+                st.session_state.historico_mcp[assoc] = hist_injectar
+            else:
+                mcp_server._HISTORICO.pop(assoc, None)
+                st.session_state.historico_mcp.pop(assoc, None)
             st.session_state["_fill_tx"] = tx
             st.rerun()
 
@@ -440,256 +501,228 @@ st.markdown("""
 chat_container = st.container()
 
 with chat_container:
-
     if not st.session_state.messages:
-
         st.markdown("""
-        <div class="msg-agent">
-        👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao
-        <strong>IBM watsonx Orchestrate</strong>.<br><br>
-
-        Posso analisar uma transação financeira em tempo real e dizer
-        se ela parece segura ou suspeita — em menos de 50 ms.<br><br>
-
-        <strong>Para começar:</strong> preencha os campos abaixo com
-        os dados da transação, ou escolha um exemplo pronto na barra
-        lateral. 👈
-        </div>
-        """, unsafe_allow_html=True)
-
+<div class="msg-agent">
+👋 Olá! Sou o Agente Anti-Fraude do Sicredi, conectado ao <strong>IBM watsonx Orchestrate</strong>.<br><br>
+Posso analisar uma transação financeira em tempo real e dizer se ela parece segura ou suspeita —
+em menos de 50 ms.<br><br>
+<strong>Para começar:</strong> preencha os campos abaixo com os dados da transação, ou escolha um
+exemplo pronto na barra lateral. 👈
+</div>
+""", unsafe_allow_html=True)
     else:
-
         for msg in st.session_state.messages:
             _render_msg(msg)
 
 
-         
-
 # ── Formulário de entrada de transação ────────────────────────────────────────
+st.divider()
 
+# Preenche campos se um exemplo foi selecionado
 _fill = st.session_state.get("_fill_tx", None)
 
-# ── Controle HITL: aguardando confirmação do associado ────────────────────────
 if st.session_state.aguardando_resp:
-
-    st.markdown(
-        '<div class="msg-system">'
-        '⏳ <strong>Aguardando sua decisão</strong> — '
-        'a transação está pausada.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="msg-system">⏳ <strong>Aguardando sua decisão</strong> — a transação está pausada.</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
-
     with col1:
-        if st.button(
-            "✅ Sim, fui eu — liberar",
-            use_container_width=True,
-            type="primary"
-        ):
-            _add_msg(
-                "user",
-                "✅ Sim, fui eu — pode liberar"
-            )
-
-            _processar_resposta_hitl(
-                "SIM",
-                st.session_state.ultima_analise,
-                st.session_state.ultima_analise
-            )
-
+        if st.button("✅ Sim, fui eu — liberar", use_container_width=True, type="primary"):
+            _add_msg('user', "✅ Sim, fui eu — pode liberar")
+            # Passa a análise guardada em sessão para evitar perda de contexto
+            _processar_resposta_hitl('SIM', st.session_state.ultima_analise, st.session_state.ultima_analise)
+            st.meta_private_attributes = {}
             st.rerun()
-
     with col2:
-        if st.button(
-            "🚫 Não fui eu — bloquear cartão",
-            use_container_width=True
-        ):
-            _add_msg(
-                "user",
-                "🚫 Não fui eu — bloquear cartão"
-            )
-
-            _processar_resposta_hitl(
-                "NÃO",
-                st.session_state.ultima_analise,
-                st.session_state.ultima_analise
-            )
-
+        if st.button("🚫 Não fui eu — bloquear cartão", use_container_width=True):
+            _add_msg('user', "🚫 Não fui eu — bloquear cartão")
+            _processar_resposta_hitl('NÃO', st.session_state.ultima_analise, st.session_state.ultima_analise)
             st.rerun()
 
 
-# ── Formulário normal de transação ────────────────────────────────────────────
 else:
-
-    categorias = [
-        "Supermercados",
-        "Restaurantes",
-        "Farmácias",
-        "Postos de Combustível",
-        "Eletrônicos",
-        "Joalherias",
-        "Artigos de Luxo",
-        "Casas de Câmbio",
-        "Cassinos",
-        "Apostas",
-        "Restaurante / Alimentação",
-        "Transferência Financeira",
-        "E-commerce / Eletrônicos",
-        "Vestuário / Moda",
-        "Educação / Ensino",
-        "Streaming / Entretenimento Digital",
-        "Outros"
-    ]
-
+    # ── Formulário normal de transação ────────────────────────────────────────
     with st.form("form_transacao", clear_on_submit=False):
 
-        st.markdown("**📋 Dados da Transação**")
+        # ── Linha 1: ID Associado | Categoria | Valor ─────────────────────
+        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>📋 Dados da Transação</p>", unsafe_allow_html=True)
+        r1c1, r1c2, r1c3 = st.columns([1.2, 1.8, 1.0])
 
-        # ── Dados principais ──────────────────────────────────────────────────
-        col1, col2 = st.columns(2)
-
-        with col1:
-
+        with r1c1:
             assoc_id = st.text_input(
                 "ID do Associado",
                 value=_fill["associado_id"] if _fill else "demo_user",
-                placeholder="ex: assoc_001"
+                placeholder="ex: assoc_001",
             )
 
+        _cats = [
+            "Supermercados", "Restaurantes", "Farmácias",
+            "Postos de Combustível", "Eletrônicos", "Joalherias",
+            "Artigos de Luxo", "Casas de Câmbio", "Cassinos", "Apostas",
+            "Restaurante / Alimentação", "Transferência Financeira",
+            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+            "Streaming / Entretenimento Digital", "Outros",
+        ]
+        with r1c2:
             categoria = st.selectbox(
                 "Categoria",
-                options=categorias,
+                options=_cats,
                 index=(
-                    categorias.index(_fill["categoria"])
-                    if _fill and _fill["categoria"] in categorias
+                    _cats.index(_fill["categoria"])
+                    if _fill and _fill.get("categoria") in _cats
                     else 0
-                )
+                ),
             )
 
-        with col2:
-
+        with r1c3:
             valor = st.number_input(
                 "Valor (R$)",
-                min_value=0.01,
-                max_value=999999.99,
-                step=10.0,
+                min_value=0.01, max_value=999999.99, step=10.0,
                 value=float(_fill["valor"]) if _fill else 150.0,
-                format="%.2f"
+                format="%.2f",
             )
 
+        st.write("")
+
+        # ── Linha 2: Cidade | Estado/País | Latitude | Longitude ──────────
+        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>", unsafe_allow_html=True)
+
+        # Opções do seletor: 27 estados + entrada Internacional
+        _OPCOES_LOCAL = _OPCOES_ESTADO + ["🌍 Internacional"]
+
+        # Detecta se o _fill é internacional (tem pais diferente de BR, sem estado)
+        _fill_is_intl = (
+            _fill and
+            not _fill.get("estado") and
+            str(_fill.get("pais", "BR")).upper() not in ("", "BR")
+        )
+
+        if _fill_is_intl:
+            _fill_opcao_local = "🌍 Internacional"
+        else:
+            _fill_estado = _fill.get("estado") if _fill else None
+            if not _fill_estado and _fill and _fill.get("latitude") and _fill.get("longitude"):
+                _fill_estado = _estado_da_coordenada(
+                    float(_fill["latitude"]), float(_fill["longitude"])
+                )
+            _fill_estado = _fill_estado or "RS"
+            _fill_opcao_local = next(
+                (o for o in _OPCOES_ESTADO if o.startswith(_fill_estado + " ")), _OPCOES_ESTADO[0]
+            )
+
+        _is_intl_pre = _fill_is_intl  # usado apenas para defaults antes do widget
+
+        if _is_intl_pre:
+            _lat_def_pre = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else 48.8566
+            _lon_def_pre = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else 2.3522
+        else:
+            _estado_pre = _fill.get("estado") if _fill else "RS"
+            _estado_pre = _estado_pre or "RS"
+            _, _lat_def_pre, _lon_def_pre = ESTADOS_BR.get(_estado_pre, ESTADOS_BR["RS"])
+
+        _cidade_def = _fill.get("cidade", "") if _fill else ""
+
+        r2c1, r2c2, r2c3, r2c4 = st.columns([1.4, 1.6, 1.0, 1.0])
+
+        with r2c1:
             cidade = st.text_input(
                 "Cidade",
-                value=(
-                    _fill.get("cidade", "Porto Alegre")
-                    if _fill else "Porto Alegre"
-                ),
-                placeholder="ex: São Paulo"
+                value=_cidade_def,
+                placeholder="ex: Porto Alegre",
             )
 
-        st.write("")
-
-        # ── Estado, País e Fuso ───────────────────────────────────────────────
-        st.markdown("**🗺️ Localização e Fuso Horário**")
-
-        loc_col1, loc_col2, loc_col3 = st.columns(3)
-
-        with loc_col1:
-            estado = st.text_input(
-                "Estado / UF",
-                value=(_fill.get("estado", "RS") if _fill else "RS"),
-                placeholder="ex: RS, SP, RJ"
+        with r2c2:
+            local_opcao = st.selectbox(
+                "Estado / País",
+                options=_OPCOES_LOCAL,
+                index=_OPCOES_LOCAL.index(_fill_opcao_local),
+                help="Estado BR (lat/lon automáticos) ou 🌍 Internacional para coordenadas livres.",
             )
 
-        with loc_col2:
-            pais = st.text_input(
-                "País (ISO)",
-                value=(_fill.get("pais", "BR") if _fill else "BR"),
-                placeholder="ex: BR, JP, US"
-            )
+        _is_intl = local_opcao == "🌍 Internacional"
 
-        with loc_col3:
-            fuso_horario = st.text_input(
-                "Fuso Horário",
-                value=(_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo"),
-                placeholder="ex: America/Sao_Paulo"
-            )
+        if _is_intl:
+            estado_sigla = ""
+            _lat_def = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else _lat_def_pre
+            _lon_def = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else _lon_def_pre
+            _pais_def = str(_fill.get("pais", "FR")).upper() if (_fill and _fill.get("pais")) else "FR"
+        else:
+            estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
+            _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
+            _pais_def = "BR"
 
-        st.write("")
-
-        # ── Data e hora local ─────────────────────────────────────────────────
-        st.markdown("**🕐 Data e Hora Local da Transação**")
-
-        dt_col1, dt_col2 = st.columns(2)
-
-        with dt_col1:
-            data_local = st.date_input(
-                "Data local",
-                value=(
-                    datetime.fromisoformat(
-                        _fill["data_hora_local"].split("T")[0]
-                    ).date()
-                    if _fill and _fill.get("data_hora_local") else datetime.now().date()
-                )
-            )
-
-        with dt_col2:
-            hora_local = st.time_input(
-                "Hora local",
-                value=(
-                    datetime.fromisoformat(
-                        _fill["data_hora_local"][:19]
-                    ).time()
-                    if _fill and _fill.get("data_hora_local") else datetime.now().time()
-                ),
-                step=60
-            )
-
-        st.write("")
-
-        # ── Coordenadas geográficas ───────────────────────────────────────────
-        st.markdown("**📍 Coordenadas GPS**")
-
-        coord_col1, coord_col2 = st.columns(2)
-
-        with coord_col1:
-
+        with r2c3:
             lat = st.number_input(
                 "Latitude",
-                value=(
-                    float(_fill["latitude"])
-                    if _fill else -30.0346
-                ),
-                format="%.4f",
-                step=0.001
+                value=_lat_def,
+                format="%.4f", step=0.0001,
+                help="Automático para BR; editável para Internacional.",
             )
 
-        with coord_col2:
-
+        with r2c4:
             lon = st.number_input(
                 "Longitude",
-                value=(
-                    float(_fill["longitude"])
-                    if _fill else -51.2177
-                ),
-                format="%.4f",
-                step=0.001
+                value=_lon_def,
+                format="%.4f", step=0.0001,
+                help="Automático para BR; editável para Internacional.",
+            )
+
+        # País ISO-2 visível apenas para Internacional
+        if _is_intl:
+            pais_intl = st.text_input(
+                "País (ISO-2)",
+                value=_pais_def,
+                placeholder="ex: JP, AR, US, PT",
+                max_chars=2,
+                help="Código ISO 3166-1 alpha-2. Janela GPS crítica: < 48h para internacionais.",
+            ).upper().strip() or "XX"
+        else:
+            pais_intl = "BR"
+
+        st.write("")
+
+        # ── Linha 3: Data | Hora local | (espaço reservado) ───────────────
+        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🕐 Data e Hora Local da Transação</p>", unsafe_allow_html=True)
+
+        # Valores padrão para data/hora a partir do _fill
+        _fill_ts = _fill.get("timestamp", "") if _fill else ""
+        try:
+            _fill_dt = datetime.fromisoformat(_fill_ts[:19]) if _fill_ts else datetime.now()
+        except (ValueError, TypeError):
+            _fill_dt = datetime.now()
+
+        r3c1, r3c2, r3c3 = st.columns([1.2, 1.0, 1.8])
+
+        with r3c1:
+            data_local = st.date_input(
+                "Data local",
+                value=_fill_dt.date(),
+            )
+
+        with r3c2:
+            hora_local = st.time_input(
+                "Hora local",
+                value=_fill_dt.time(),
+                step=60,
+            )
+
+        with r3c3:
+            fuso_horario = st.text_input(
+                "Fuso Horário",
+                value=_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo",
+                placeholder="ex: America/Sao_Paulo, Asia/Tokyo",
+                help="Fuso IANA. Usado para exibição da data/hora ao associado.",
             )
 
         st.write("")
 
-        # ── Botão de análise ──────────────────────────────────────────────────
         submitted = st.form_submit_button(
             "🔍 Analisar Transação",
             use_container_width=True,
-            type="primary"
+            type="primary",
         )
 
-    # ── Processamento da transação ────────────────────────────────────────────
     if submitted:
-
-        # ── Monta data/hora local com offset do fuso ──────────────────────────
+        # Monta offset a partir do fuso informado
         _offset = {
             "America/Sao_Paulo": "-03:00", "America/Fortaleza": "-03:00",
             "America/Manaus": "-04:00",    "America/Rio_Branco": "-05:00",
@@ -702,115 +735,66 @@ else:
         )
 
         tx = {
-            "transacao_id": f"tx-{int(time.time() * 1000)}",
+            "transacao_id": f"tx-{int(time.time()*1000)}",
             "associado_id": assoc_id.strip() or "demo_user",
-            "valor": valor,
-            "categoria": categoria,
-            "cidade": cidade.strip(),
-            "estado": estado.strip(),
-            "pais": pais.strip().upper(),
+            "valor":        valor,
+            "categoria":    categoria,
+            "cidade":       cidade or (local_opcao.split(" — ")[-1] if not _is_intl else ""),
             "fuso_horario": fuso_horario.strip(),
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp":    f"{data_local.isoformat()}T{hora_local.strftime('%H:%M:%S')}",
             "data_hora_local": data_hora_local_str,
-            "latitude": lat,
-            "longitude": lon,
+            "latitude":     lat,
+            "longitude":    lon,
         }
+        if _is_intl:
+            tx["pais"] = pais_intl
+        else:
+            tx["estado"] = estado_sigla
+            tx["pais"] = "BR"
 
-        # ── Formatação do valor monetário ─────────────────────────────────────
-        valor_fmt = (
-            f"R$ {valor:,.2f}"
-            .replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
+        # Mensagem do usuário no chat
+        valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        cidade_exib = tx.get("cidade", "")
+        if _is_intl:
+            local_exib = f"{cidade_exib} ({pais_intl}) 🌍"
+        else:
+            local_exib = f"{cidade_exib} ({estado_sigla})"
+        _add_msg("user",
+            f"📤 Analisar transação: <strong>{valor_fmt}</strong> em "
+            f"<strong>{categoria}</strong> — {local_exib}<br>"
+            f"<span style='font-size:0.82rem;opacity:0.8'>Associado: {tx['associado_id']} &nbsp;·&nbsp; "
+            f"{data_local.strftime('%d/%m/%Y')} às {hora_local.strftime('%H:%M')} "
+            f"({fuso_horario.strip() or 'UTC'})</span>"
         )
 
-        # ── Localização legível para exibição no chat ─────────────────────────
-        loc_partes = [p for p in [cidade.strip(), estado.strip(), pais.strip().upper()] if p]
-        loc_txt = ", ".join(loc_partes) if loc_partes else "local não informado"
-
-        # ── Registra mensagem do associado ────────────────────────────────────
-        _add_msg(
-            "user",
-            f"📤 Analisar transação: "
-            f"<strong>{valor_fmt}</strong> "
-            f"em <strong>{categoria}</strong> — {loc_txt}<br>"
-            f"<span style='font-size:0.82rem;opacity:0.8'>"
-            f"Associado: {tx['associado_id']} &nbsp;·&nbsp; "
-            f"{data_local.strftime('%d/%m/%Y')} às {hora_local.strftime('%H:%M')} ({fuso_horario.strip() or 'UTC'})"
-            f"</span>"
-        )
-
-        # ── Executa análise MCP ───────────────────────────────────────────────
-        try:
-
-            with st.spinner("🛡️ Agente analisando transação..."):
-
-                # Motor de análise de risco
-                analise = _analisar(tx)
-
-                # Geração da explicação para o associado
-                explicacao = json.loads(
-                    explicar_risco_fraude(
-                        json.dumps(
-                            analise,
-                            ensure_ascii=False
-                        )
-                    )
-                )
-
-                # Constrói resposta visual do agente
-                html, role = _construir_mensagem_agente(
-                    analise,
-                    explicacao
-                )
-
-                # Adiciona resposta ao chat
-                _add_msg(role, html)
-
-                # ── Fluxo HITL para risco crítico ────────────────────────────
-                if analise["score_risco"] > 70:
-
-                    st.session_state.aguardando_resp = tx["transacao_id"]
-
-                    st.session_state.ultima_analise = analise
-
-                    _add_msg(
-                        "system",
-                        "⏸️ Fluxo de liquidação pausado — "
-                        "aguardando sua confirmação abaixo."
-                    )
-
-                # ── Limpa exemplo selecionado ────────────────────────────────
-                st.session_state.pop("_fill_tx", None)
-
-        except Exception as e:
-
-            _add_msg(
-                "block",
-                "❌ <strong>Erro ao processar a transação.</strong><br>"
-                f"Detalhes: {str(e)}"
+        with st.spinner("Agente analisando..."):
+            analise    = _analisar(tx)
+            explicacao = json.loads(
+                explicar_risco_fraude(json.dumps(analise, ensure_ascii=False))
             )
 
-        # Atualiza a interface
+        html, role = _construir_mensagem_agente(analise, explicacao)
+        _add_msg(role, html)
+
+        # Se crítico: ativa modo HITL
+        if analise["score_risco"] > 70:
+            st.session_state.aguardando_resp = tx["transacao_id"]
+            st.session_state.ultima_analise  = analise
+            _add_msg("system",
+                "⏸️ Fluxo de liquidação pausado — aguardando sua confirmação abaixo."
+            )
+
         st.rerun()
 
 
 # ── Rodapé ────────────────────────────────────────────────────────────────────
-
-st.markdown(
-    """
+st.markdown("""
 <div class="ibm-footer">
-    Sicredi · AI Experiential Learning Lab 2026
-    &nbsp;|&nbsp;
-    Motor MCP local · IBM watsonx Orchestrate (simulação)
-    &nbsp;|&nbsp;
-    <a href="https://github.com/samuel2k6/Projeto-Anti-fraude"
-       target="_blank"
-       rel="noopener noreferrer"
-       style="color:#0f62fe;text-decoration:none">
-       GitHub ↗
-    </a>
+  Sicredi · AI Experiential Learning Lab 2026 &nbsp;|&nbsp;
+  Motor MCP local · IBM watsonx Orchestrate (simulação) &nbsp;|&nbsp;
+  <a href="https://github.com/samuel2k6/Projeto-Anti-fraude" target="_blank"
+     style="color:#0f62fe;text-decoration:none">
+    GitHub ↗
+  </a>
 </div>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)

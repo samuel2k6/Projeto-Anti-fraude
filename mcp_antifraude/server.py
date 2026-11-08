@@ -123,10 +123,24 @@ CATEGORIAS_ALTO_RISCO = {
 HORA_NORMAL_INICIO = time(6, 0)
 HORA_NORMAL_FIM = time(22, 0)
 
-# Raio máximo percorrível em 30 minutos a qualquer meio convencional (km)
-# Avião comercial ~900 km/h → 30 min ≈ 450 km; usamos 300 km como limiar prático
+# Velocidade física impossível (km/h) — acima disso não existe meio de transporte convencional
 VELOCIDADE_IMPOSSIVEL_KM = 300.0
-INTERVALO_MINUTOS = 30
+
+# Janelas de tempo para a regra de GPS (dois limiares por origem da transação):
+#
+#   Transação NACIONAL (pais == "BR"):
+#     • < 24h (1440 min)  → alerta CRÍTICO  — deslocamento impossível em extratos nacionais
+#     • 24h–48h (1440–2880 min) → alerta MÉDIO — distância suspeita mas com mais margem
+#
+#   Transação INTERNACIONAL (pais != "BR"):
+#     • < 48h (2880 min)  → alerta CRÍTICO  — cobertura de voos internacionais
+#     • 48h–96h (2880–5760 min) → alerta MÉDIO — viagem recente ainda suspeita
+#
+# Fora das janelas máximas a regra não é disparada.
+GPS_CRITICO_BR_MIN    = 1440   # 24h — limiar crítico para nacionais
+GPS_MEDIO_BR_MIN      = 2880   # 48h — limiar médio para nacionais
+GPS_CRITICO_INTL_MIN  = 2880   # 48h — limiar crítico para internacionais
+GPS_MEDIO_INTL_MIN    = 5760   # 96h — limiar médio para internacionais
 
 # Multiplicador para "Pico de Transação"
 MULTIPLICADOR_PICO = 3.0
@@ -249,15 +263,37 @@ def _formatar_data_hora(transacao: dict[str, Any]) -> str:
 # Regras heurísticas
 # ---------------------------------------------------------------------------
 
+def _is_brasil(transacao: dict[str, Any]) -> bool:
+    """Retorna True se a transação for no Brasil (pais == 'BR' ou estado preenchido sem pais)."""
+    pais = str(transacao.get("pais") or "").strip().upper()
+    if pais:
+        return pais == "BR"
+    # Sem campo pais: considera Brasil se tiver estado ou cidade preenchidos
+    return bool(transacao.get("estado") or transacao.get("cidade"))
+
+
 def _regra_velocidade_impossivel(
     transacao: dict[str, Any],
     historico: list[dict[str, Any]],
-) -> tuple[bool, str]:
+) -> tuple[bool, str, str]:
     """
     Regra 1 — Velocidade Impossível (GPS)
-    Verifica se existe alguma transação anterior cujo intervalo de tempo em
-    relação à transação atual é ≤ INTERVALO_MINUTOS e a distância geográfica
-    é maior do que o possível nesse intervalo.
+
+    Janela de análise com dois níveis de severidade:
+
+      Nacional (pais == "BR"):
+        • intervalo ≤ 24h  → severidade "CRITICO"
+        • 24h < intervalo ≤ 48h → severidade "MEDIO"
+
+      Internacional (pais != "BR"):
+        • intervalo ≤ 48h  → severidade "CRITICO"
+        • 48h < intervalo ≤ 96h → severidade "MEDIO"
+
+    Dispara quando a velocidade implícita entre dois pontos supera
+    VELOCIDADE_IMPOSSIVEL_KM * 2 (600 km/h).
+
+    Retorna (disparou, detalhe, severidade).
+    severidade é "CRITICO" | "MEDIO" (vazio quando não disparou).
     """
     # Aplana subobjeto "localizacao" antes de acessar os campos
     transacao = _nivelar_localizacao(transacao)
@@ -266,14 +302,18 @@ def _regra_velocidade_impossivel(
 
     # Ignora silenciosamente se latitude/longitude ausentes ou de tipo inválido
     if lat_atual is None or lon_atual is None:
-        return False, ""
+        return False, "", ""
     if not isinstance(lat_atual, (int, float)) or not isinstance(lon_atual, (int, float)):
-        return False, ""
+        return False, "", ""
 
     try:
         ts_atual = _parse_ts(transacao["timestamp"])
     except (ValueError, TypeError):
-        return False, ""
+        return False, "", ""
+
+    nacional = _is_brasil(transacao)
+    # Janela máxima para cada origem
+    janela_max = GPS_MEDIO_BR_MIN if nacional else GPS_MEDIO_INTL_MIN
 
     for tx in historico:
         tx = _nivelar_localizacao(tx)
@@ -284,26 +324,32 @@ def _regra_velocidade_impossivel(
         except (ValueError, TypeError):
             continue
         diff_min = abs((ts_atual - ts_ant).total_seconds()) / 60.0
-        if diff_min > INTERVALO_MINUTOS:
+        if diff_min > janela_max:
             continue
         dist_km = _haversine(lat_atual, lon_atual, tx["latitude"], tx["longitude"])
         # Velocidade média necessária (km/h)
         velocidade = dist_km / (diff_min / 60.0) if diff_min > 0 else float("inf")
         if velocidade > VELOCIDADE_IMPOSSIVEL_KM * 2:  # > 600 km/h → inviável
+            # Determina severidade pelo limiar crítico de cada origem
+            limiar_critico = GPS_CRITICO_BR_MIN if nacional else GPS_CRITICO_INTL_MIN
+            severidade = "CRITICO" if diff_min <= limiar_critico else "MEDIO"
+
             # Monta descrição de localização anterior (cidade/estado/país quando disponível)
             loc_ant = _resumo_localizacao(tx)
             loc_ant_txt = f" ({loc_ant})" if loc_ant else ""
             # Monta descrição de localização atual
             loc_atu = _resumo_localizacao(transacao)
             loc_atu_txt = f" ({loc_atu})" if loc_atu else ""
+            janela_txt = "24h" if nacional else "48h"
             detalhe = (
                 f"Distância de {dist_km:.1f} km em {diff_min:.1f} min "
                 f"({velocidade:.0f} km/h) entre a transação {tx['transacao_id']}"
-                f"{loc_ant_txt} e esta compra{loc_atu_txt}"
+                f"{loc_ant_txt} e esta compra{loc_atu_txt} "
+                f"[janela crítica: {janela_txt} | severidade: {severidade}]"
             )
-            return True, detalhe
+            return True, detalhe, severidade
 
-    return False, ""
+    return False, "", ""
 
 
 def _regra_pico_transacao(
@@ -450,16 +496,25 @@ def analisar_risco_transacao(transacao_json: str) -> str:
     regras_violadas: list[dict[str, str]] = []
     score = 0
 
-    ok, detalhe = _regra_velocidade_impossivel(transacao, historico)
+    ok, detalhe, severidade_gps = _regra_velocidade_impossivel(transacao, historico)
     if ok:
+        # Score adaptativo: CRITICO = +55 (garante nível CRITICO sozinho),
+        # MEDIO = +30 (nível MEDIO isolado, ALTO em combinação)
+        score_gps = 55 if severidade_gps == "CRITICO" else 30
         regras_violadas.append(
             {
                 "regra": "VELOCIDADE_IMPOSSIVEL",
-                "descricao": "Compra registrada em um lugar muito distante do uso anterior, em tempo curto demais para ser possível",
+                "descricao": (
+                    "Compra registrada em um lugar muito distante do uso anterior, "
+                    "em tempo curto demais para ser possível"
+                    if severidade_gps == "CRITICO"
+                    else "Compra em localização distante do uso recente — intervalo de tempo suspeito"
+                ),
                 "detalhe": detalhe,
+                "severidade": severidade_gps,
             }
         )
-        score += 45
+        score += score_gps
 
     ok, detalhe = _regra_pico_transacao(transacao, historico)
     if ok:
