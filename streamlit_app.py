@@ -591,7 +591,7 @@ else:
         st.write("")
 
         # ── Estado, País e Fuso ───────────────────────────────────────────────
-        st.markdown("**🗺️ Estado / País / Fuso Horário**")
+        st.markdown("**🗺️ Localização e Fuso Horário**")
 
         loc_col1, loc_col2, loc_col3 = st.columns(3)
 
