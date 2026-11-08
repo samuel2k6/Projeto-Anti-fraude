@@ -201,6 +201,16 @@ st.markdown("""
     border-top: 1px solid #e0e0e0;
   }
 
+  
+  .stWidgetFormLabel, 
+  [data-testid="stWidgetLabel"] p,
+  .stSelectbox label p,
+  .stTextInput label p,
+  .stNumberInput label p {
+    color: #262626 !important; /* Cinza IBM Carbon v11 (Super Escuro) */
+    font-weight: 500 !important;
+  }
+
   /* Remove padding extra dos containers de chat */
   .chat-area { max-height: 520px; overflow-y: auto; padding: 4px 0; }
 </style>
