@@ -1,0 +1,205 @@
+ROTEIRO — VÍDEO DE APRESENTAÇÃO PARA BANCA DE AVALIAÇÃO
+Projeto: Sistema de Prevenção de Fraudes em Cartões — Sicredi
+AI Experiential Learning Lab | Trilha 4 | 2026
+Duração total: 3 minutos (180 segundos)
+
+================================================================================
+BLOCO 1 — INTRODUÇÃO [0:00 – 0:30]
+================================================================================
+
+O Sicredi opera no modelo de cooperativismo, onde cada pessoa é associada
+e não apenas cliente — uma relação de confiança que precisa ser preservada
+em cada transação financeira.
+
+O desafio que abordamos é real: como detectar fraudes em cartões em tempo
+real sem bloquear transações legítimas e sem tratar o associado como suspeito?
+
+Nossa resposta é um agente de IA que analisa cada transação antes da conclusão
+financeira, decide em menos de 300 milissegundos e explica o risco em
+linguagem que qualquer pessoa entende.
+
+
+================================================================================
+BLOCO 2 — DEMONSTRAÇÃO PRÁTICA [0:30 – 2:00]
+================================================================================
+
+Aqui está a interface da nossa demo, construída em Streamlit e integrada ao
+IBM watsonx Orchestrate — a plataforma de orquestração de agentes da IBM que
+utilizamos como backbone da solução.
+
+Na barra lateral temos transações de teste pré-configuradas. Vou selecionar
+a mais crítica: "GPS Impossível — RS para Tóquio".
+
+O sistema preenche automaticamente os dados: R$ 1.247,83 em Restaurante,
+coordenadas de Tóquio, enquanto o histórico do associado registra uma compra
+em Porto Alegre há exatamente 12 minutos.
+
+Clico em "Analisar Transação".
+
+O agente usa o protocolo MCP — Model Context Protocol — para acionar em
+paralelo cinco servidores especializados: histórico do associado, detector de
+carding, lista negra, coerência geográfica e motor de decisão.
+
+O resultado aparece em menos de 50 milissegundos.
+
+Score 100 de 100. Decisão: BLOQUEADA. Risco Crítico.
+
+O agente identificou que cobrir 18.822 quilômetros em 12 minutos exigiria
+94.115 km/h — fisicamente impossível. Isso é a regra de GPS aplicada em tempo
+real, com o peso de 30% que ela carrega no modelo de scoring.
+
+Porque o score superou 70, o sistema ativa o fluxo HITL — Human in the Loop.
+O fluxo de liquidação fica pausado e dois botões aparecem na tela: "Sim, fui eu,
+liberar" ou "Não fui eu, bloquear cartão".
+
+É exatamente essa tela que o associado veria no aplicativo Sicredi.
+
+Vou mostrar agora um caso menos óbvio. Seleciono "PR para SP em 60 minutos".
+Score 60, Risco Médio. O sistema detecta a anomalia geográfica inter-estadual
+mas, como o valor é moderado, aprova com alerta silencioso ao analista —
+sem interromper o associado. Essa calibração de thresholds está no arquivo
+fraud_rules.json e pode ser ajustada sem alterar o código do agente.
+
+
+================================================================================
+BLOCO 3 — O IMPACTO DA IA EXPLICÁVEL [2:00 – 2:40]
+================================================================================
+
+O que diferencia esse sistema não é só a velocidade. É o que aparece junto
+com a decisão.
+
+Cada resposta do agente traz título, motivos em linguagem direta e uma
+orientação para o associado — sem jargão técnico, sem score numérico exposto,
+sem termos como "anomalia estatística multivariada".
+
+O associado recebe algo como: "Identificamos uma compra fora do seu padrão
+habitual. Foi você?" com dois botões para responder.
+
+Isso é IA Explicável no ponto de decisão. A resposta do associado — confirmar
+ou negar — volta ao modelo como sinal de feedback, melhorando a precisão
+de forma contínua. Nossa meta projetada é taxa de falso positivo abaixo de
+0,5% e F1-Score acima de 0,90.
+
+
+================================================================================
+BLOCO 4 — CONCLUSÃO E PRÓXIMOS PASSOS [2:40 – 3:00]
+================================================================================
+
+O sistema está projetado para operar em escala: mais de 10.000 transações
+por segundo sobre Kubernetes na IBM Cloud, com 99,99% de disponibilidade.
+
+Os próximos passos são um piloto com uma cooperativa singular do Sicredi,
+integração com watsonx.ai para retraining contínuo e expansão da detecção
+para Pix e TED.
+
+Agradecemos aos mentores do AI Experiential Learning Lab da IBM SkillsBuild
+pelo suporte ao longo deste projeto. O repositório está público e a demo
+está no ar via Streamlit Cloud.
+
+
+================================================================================
+PALAVRAS-CHAVE PARA A BANCA
+================================================================================
+
+Técnicas:
+  MCP (Model Context Protocol), IA Agêntica, IBM watsonx Orchestrate,
+  HITL (Human in the Loop), IA Explicável (Explainable AI), Score de Risco,
+  Latência sub-50ms, GPS Coerência Geográfica, Carding Detection,
+  Feedback Loop, Retraining Contínuo, Gradient Boosting, SHAP-like,
+  Redis Cache, Kafka Event Stream, PCI-DSS, LGPD, AUC-ROC, F1-Score
+
+Negócio / Contexto:
+  Cooperativismo, Associado, Relação de Confiança, Falso Positivo,
+  Prevenção de Fraudes em Cartões, Sicredi, Atrito na Jornada do Associado,
+  Redutor de Carga Cognitiva, Guardião de Tomada de Decisão,
+  Intervenção em Tempo Real, Escala Nacional, AI Experiential Learning Lab
+
+Diferenciais do projeto:
+  Interface conversacional (Streamlit + watsonx Orchestrate simulado),
+  Servidores MCP especializados e independentes, Auditabilidade completa,
+  Regras configuráveis sem alterar código, Threshold adaptativo por perfil
+
+================================================================================
+PLANOS B — CONTINGÊNCIAS PARA A DEMONSTRAÇÃO AO VIVO
+================================================================================
+
+PROBLEMA 1 — Streamlit local não sobe (erro de dependência, porta ocupada, etc.)
+  → Abrir o link público do Streamlit Cloud direto no navegador:
+    https://samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app
+  → A demo completa está deployada lá e funciona sem instalação local.
+  → Frase de transição: "Vou usar a versão em nuvem, que está sempre disponível."
+
+PROBLEMA 2 — Streamlit Cloud fora do ar ou lento
+  → Abrir o arquivo fraud_rules.json no VS Code ou bloco de notas e mostrar
+    as regras e pesos diretamente: GPS (30%), pico (25%), perfil (25%), etc.
+  → Mostrar o código da função _haversine em mcp_antifraude/server.py (linha 181)
+    e explicar o cálculo de velocidade verbalmente com os números do caso RS→Tóquio:
+    18.822 km ÷ 12 min × 60 = 94.115 km/h.
+  → Frase de transição: "A demo visual está temporariamente indisponível,
+    mas posso mostrar diretamente o código que a sustenta."
+
+PROBLEMA 3 — Demo abre mas trava ao clicar em "Analisar Transação"
+  → Clicar em "Limpar conversa" na barra lateral e tentar novamente.
+  → Se persistir, trocar de exemplo — usar "GPS — DF → Buenos Aires"
+    no lugar de "GPS Impossível — RS → Tóquio". Mesmo comportamento esperado:
+    Score 100, CRÍTICO, HITL ativado.
+  → Último recurso: abrir o terminal, rodar python run_tests.py e mostrar
+    a saída de texto com os resultados de análise das 7 transações de teste.
+
+PROBLEMA 4 — Score retorna diferente do esperado no roteiro
+  Valores de referência reais para cada caso da sidebar:
+    ✅ Normal — Farmácia R$87,43        → Score 0   | BAIXO    | APROVADA
+    ✅ Normal — Supermercado no padrão  → Score 0   | BAIXO    | APROVADA
+    ⚠️ PR → SP em 60 min               → Score 35  | MÉDIO    | alerta silencioso
+    ⚠️ MG → RJ em 90 min               → Score 35  | MÉDIO    | alerta silencioso
+    ⚠️ Pico — Eletrônicos 4.6x acima   → Score 35  | MÉDIO    | alerta silencioso
+    ⚠️ Joalheria às 03h17              → Score 25  | MÉDIO    | alerta silencioso
+    🔴 Cassino 04h38 — pico + perfil   → Score 60  | ALTO     | alerta silencioso
+    🚨 GPS Impossível — RS → Tóquio    → Score 100 | CRÍTICO  | HITL ativo
+    🚨 GPS — DF → Buenos Aires         → Score 100 | CRÍTICO  | HITL ativo
+  → Se um score vier diferente, mencionar que o modelo combina múltiplas
+    regras e o score final pode variar conforme o contexto acumulado na sessão.
+    Clicar em "Limpar conversa" reseta o histórico e normaliza os resultados.
+
+PROBLEMA 5 — A banca pergunta sobre algo que não está na demo
+  Perguntas prováveis e respostas de apoio:
+
+  "Vocês usam watsonx de verdade?"
+  → A arquitetura está projetada para integrar com IBM watsonx Orchestrate
+    como orquestrador e watsonx.ai para retraining. A demo simula essa camada
+    localmente via MCP para viabilizar a apresentação sem credenciais de produção.
+    O código de integração está modularizado para facilitar a substituição.
+
+  "Qual a latência real?"
+  → No Streamlit Cloud, a latência total (clique → resposta) fica entre 80ms
+    e 250ms dependendo do servidor. Localmente, consistentemente abaixo de 50ms.
+    O campo latência aparece em cada resposta do agente na interface.
+
+  "Como o sistema evita falsos positivos?"
+  → Três mecanismos: (1) thresholds graduados — não bloqueia até score > 70,
+    abaixo disso só gera alerta; (2) HITL — associado confirma antes do bloqueio;
+    (3) feedback loop — confirmações e negações realimentam o modelo ao longo
+    do tempo, calibrando os thresholds por perfil.
+
+  "O sistema é compatível com LGPD?"
+  → Sim. Nenhum dado pessoal identificável trafega no payload — apenas IDs
+    pseudonimizados, coordenadas e valores. Toda decisão de bloqueio gera
+    registro auditável com os fatores de risco, conforme exigido pela LGPD
+    e pelo PCI-DSS Nível 1.
+
+  "E se o associado não responder à notificação?"
+  → O sistema aguarda 2 minutos (timeout configurável). Sem resposta, um alerta
+    é enviado para o analista sênior e o associado é orientado a contatar a
+    agência Sicredi. Não há bloqueio automático por timeout — para evitar
+    prejuízo causado por falha de conectividade do celular do associado.
+
+================================================================================
+NOTAS DE PRODUÇÃO
+Blocos: 30s | 90s | 40s | 20s = 180s total
+Tom: técnico, direto, demonstrativo
+Mostrar na tela: interface Streamlit ao vivo, transação GPS Impossível,
+  resultado bloqueado com HITL, depois caso inter-estadual com alerta silencioso
+Links de backup:
+  Demo ao vivo: https://samuel2k6-projeto-anti-fraude-streamlit-app-8dpf8y.streamlit.app
+  Repositório:  https://github.com/samuel2k6/Projeto-Anti-fraude
+================================================================================

@@ -1,0 +1,85 @@
+================================================================================
+DESCRIÇÃO DO PROBLEMA E DA SOLUÇÃO
+================================================================================
+
+O Sicredi opera no modelo de cooperativismo, onde cada pessoa é associada e
+co-proprietária da instituição — não apenas uma cliente. Essa relação é
+construída sobre confiança, e ela precisa ser preservada em cada transação
+financeira.
+
+O desafio que abordamos é concreto: fraudes em cartões de crédito e débito
+custam bilhões ao sistema financeiro brasileiro todos os anos. Os sistemas
+tradicionais de prevenção respondem a isso bloqueando transações de forma
+agressiva, o que corrói exatamente a confiança que define o modelo
+cooperativista. Cada transação legítima bloqueada, cada recusa sem explicação,
+deteriora o vínculo entre a instituição e seu associado.
+
+Nossa solução é um sistema de IA agêntica que analisa cada transação com
+cartão em tempo real — antes da liquidação financeira — e toma uma decisão
+baseada em risco em menos de 300 milissegundos. O sistema foi projetado em
+torno de dois princípios centrais: proteger o associado sem tratar cada
+compra como uma ameaça, e explicar cada decisão em linguagem que o associado
+consiga entender e agir.
+
+O agente avalia cada transação contra cinco regras de risco especializadas
+executadas em paralelo: velocidade geográfica impossível (coerência de GPS),
+pico de valor acima do perfil histórico do associado, estabelecimento ou BIN
+em lista negra, categoria e horário atípicos, e detecção de carding
+(sequências rápidas de transações de baixo valor). Cada regra produz um
+sub-score; uma agregação ponderada gera um score final de 0 a 100.
+
+Com base nesse score, o sistema aplica uma resposta graduada. Scores abaixo
+de 40 são aprovados automaticamente. Entre 40 e 70, um alerta silencioso é
+gerado para o painel do analista sem interromper o associado. Acima de 70,
+a transação é pausada e o fluxo Human-in-the-Loop é ativado: o associado
+recebe uma notificação em linguagem direta — sem jargão técnico, sem score
+numérico — perguntando se reconhece a compra. A resposta é processada
+imediatamente e, independente do resultado, alimenta o modelo como sinal
+de aprendizado contínuo.
+
+Esse design ataca diretamente o problema de falsos positivos que a maioria
+dos sistemas ignora. Ao tornar o associado o árbitro final nos casos
+ambíguos, o sistema reduz bloqueios indevidos enquanto mantém proteção
+robusta contra fraudes confirmadas.
+
+
+================================================================================
+DECLARAÇÃO SOBRE TECNOLOGIA
+================================================================================
+
+O projeto utiliza o IBM Bob como ambiente principal de desenvolvimento em
+todo o ciclo de construção — desde o design da arquitetura e geração de
+código até os testes, documentação e configuração de deploy. O Bob foi
+utilizado para estruturar a arquitetura multi-servidor MCP, gerar e
+refatorar o motor de scoring de risco, escrever as suítes de teste e
+produzir toda a documentação técnica, incluindo os diagramas de arquitetura
+e este documento de submissão.
+
+A camada de orquestração central é projetada sobre o IBM watsonx Orchestrate.
+O agente segue o modelo do watsonx Orchestrate: um agente central de
+raciocínio que roteia tarefas dinamicamente para ferramentas especializadas
+com base no contexto. Em nossa implementação, cada capacidade de detecção de
+fraude é exposta como um servidor MCP independente — Model Context Protocol
+— que o watsonx Orchestrate aciona em paralelo durante a análise de cada
+transação. Esses servidores cobrem: recuperação do histórico transacional do
+associado, detecção de padrão de carding, cálculo de velocidade geográfica
+(fórmula de Haversine), consulta à lista negra e o motor de decisão que
+agrega os sub-scores em um veredicto final de risco.
+
+Essa arquitetura se alinha diretamente aos dois arquétipos definidos no
+AI Experiential Learning Lab:
+
+  - Guardião de Tomada de Decisão: o agente avalia se uma transação deve
+    prosseguir com base em scoring multi-critério, limiares de confiança e
+    explicabilidade completa de cada decisão de bloqueio.
+
+  - Redutor de Carga Cognitiva: o agente sintetiza sinais transacionais
+    complexos em um único score e um alerta em linguagem humana, eliminando
+    a necessidade de análise manual na grande maioria das transações e
+    evidenciando apenas os casos que genuinamente requerem julgamento humano.
+
+O sistema é projetado para operar na infraestrutura IBM Cloud com
+auto-scaling em Kubernetes, com meta de mais de 10.000 transações por
+segundo a 99,99% de disponibilidade, e watsonx.ai como repositório de
+modelos para retraining contínuo.
+================================================================================
