@@ -151,10 +151,6 @@ MULTIPLICADOR_PICO = 3.0
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# Funções auxiliares (Substitua este trecho no seu server.py)
-# ---------------------------------------------------------------------------
-
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distância em km entre dois pontos geográficos (fórmula de Haversine)."""
     R = 6371.0
@@ -171,26 +167,46 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def _parse_ts(ts: str) -> datetime:
     """
-    Converte strings de timestamp ISO em objetos datetime.
-    Garante que o fuso horário seja removido (.replace(tzinfo=None)) para evitar 
-    erros de 'offset-naive and offset-aware' ao efetuar subtrações matemáticas.
+    Converte strings de data/hora em objetos datetime nativos do Python.
+    Garante o descarte de informações de timezone/offset (.replace(tzinfo=None))
+    para evitar erros do tipo 'can't subtract offset-naive and offset-aware datetimes'.
     """
+    if not ts:
+        return datetime.now().replace(tzinfo=None)
+        
+    ts_str = str(ts).strip()
+    
+    # Remove formatações amigáveis do chat (ex: "08/11/2026 às 22:54" ou com sufixos de fuso)
+    if " às " in ts_str:
+        ts_str = ts_str.replace(" às ", " ")
+    if " (" in ts_str:
+        ts_str = ts_str.split(" (")[0]
+    if " UTC" in ts_str:
+        ts_str = ts_str.replace(" UTC", "")
+        
+    # Tenta parsing para formato ISO padrão (com ou sem fuso horário acoplado)
     try:
-        # Se for passado uma string no formato do Streamlit com espaço em vez de 'T'
-        if " " in ts and "T" not in ts:
-            # Tenta converter formato amigável "AAAA-MM-DD HH:MM:SS"
-            dt = datetime.strptime(ts.split(".")[0].split("+")[0], "%Y-%m-%d %H:%M:%S")
-        else:
-            dt = datetime.fromisoformat(ts)
+        dt = datetime.fromisoformat(ts_str)
         return dt.replace(tzinfo=None)
-    except Exception:
-        # Fallback genérico caso a string venha em formato regional brasileiro "DD/MM/AAAA HH:MM"
+    except ValueError:
+        pass
+
+    # Tenta parsing para o formato clássico brasileiro dd/mm/aaaa hh:mm:ss
+    formatos = [
+        "%d/%m/%Y %H:%M:%S",
+        "%d/%m/%Y %H:%M",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M"
+    ]
+    for fmt in formatos:
         try:
-            dt = datetime.strptime(ts, "%d/%m/%Y %H:%M")
+            dt = datetime.strptime(ts_str, fmt)
             return dt.replace(tzinfo=None)
-        except Exception:
-            # Retorna o datetime atual sem fuso caso falhe completamente
-            return datetime.now().replace(tzinfo=None)
+        except ValueError:
+            continue
+            
+    # Fallback de segurança para não travar a esteira de análise
+    return datetime.now().replace(tzinfo=None)
 
 
 
