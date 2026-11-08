@@ -544,182 +544,134 @@ else:
     with st.form("form_transacao", clear_on_submit=False):
 
         # ── Linha 1: ID Associado | Categoria | Valor ─────────────────────
-        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>📋 Dados da Transação</p>", unsafe_allow_html=True)
-        r1c1, r1c2, r1c3 = st.columns([1.2, 1.8, 1.0])
 
-        with r1c1:
-            assoc_id = st.text_input(
-                "ID do Associado",
-                value=_fill["associado_id"] if _fill else "demo_user",
-                placeholder="ex: assoc_001",
-            )
+    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>📋 Dados da Transação</p>", unsafe_allow_html=True)
+    r1c1, r1c2, r1c3 = st.columns([1.2, 1.8, 1.0])
+    with r1c1:
+        assoc_id = st.text_input(
+            "ID do Associado",
+            value=_fill["associado_id"] if _fill else "demo_user",
+            placeholder="ex: assoc_001",
+        )
+    _cats = [
+        "Supermercados", "Restaurantes", "Farmácias", "Postos de Combustível",
+        "Eletrônicos", "Joalherias", "Artigos de Luxo", "Casas de Câmbio",
+        "Cassinos", "Apostas", "Restaurante / Alimentação", "Transferência Financeira",
+        "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
+        "Streaming / Entretenimento Digital", "Outros",
+    ]
+    with r1c2:
+        categoria = st.selectbox(
+            "Categoria",
+            options=_cats,
+            index=( _cats.index(_fill["categoria"]) if _fill and _fill.get("categoria") in _cats else 0 ),
+        )
+    with r1c3:
+        valor = st.number_input(
+            "Valor (R$)",
+            min_value=0.01,
+            max_value=999999.99,
+            step=10.0,
+            value=float(_fill["valor"]) if _fill else 150.0,
+            format="%.2f",
+        )
+    st.write( )
 
-        _cats = [
-            "Supermercados", "Restaurantes", "Farmácias",
-            "Postos de Combustível", "Eletrônicos", "Joalherias",
-            "Artigos de Luxo", "Casas de Câmbio", "Cassinos", "Apostas",
-            "Restaurante / Alimentação", "Transferência Financeira",
-            "E-commerce / Eletrônicos", "Vestuário / Moda", "Educação / Ensino",
-            "Streaming / Entretenimento Digital", "Outros",
-        ]
-        with r1c2:
-            categoria = st.selectbox(
-                "Categoria",
-                options=_cats,
-                index=(
-                    _cats.index(_fill["categoria"])
-                    if _fill and _fill.get("categoria") in _cats
-                    else 0
-                ),
-            )
+    # ── Linha 2: Cidade | Estado/País | Latitude | Longitude (DINÂMICA) ──────────
+    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>", unsafe_allow_html=True)
+    _OPCOES_LOCAL = _OPCOES_ESTADO + [ "🌍 Internacional" ]
+    _fill_is_intl = ( _fill and not _fill.get("estado") and str(_fill.get("pais", "BR")).upper() not in ( "", "BR" ) )
+    if _fill_is_intl:
+        _fill_opcao_local = "🌍 Internacional"
+    else:
+        _fill_estado = _fill.get("estado") if _fill else None
+        if not _fill_estado and _fill and _fill.get("latitude") and _fill.get("longitude"):
+            _fill_estado = _estado_da_coordenada( float(_fill["latitude"]), float(_fill["longitude"]) )
+        _fill_estado = _fill_estado or "RS"
+        _fill_opcao_local = next( (o for o in _OPCOES_ESTADO if o.startswith(_fill_estado + " —")), _OPCOES_ESTADO[0] )
 
-        with r1c3:
-            valor = st.number_input(
-                "Valor (R$)",
-                min_value=0.01, max_value=999999.99, step=10.0,
-                value=float(_fill["valor"]) if _fill else 150.0,
-                format="%.2f",
-            )
-
-        st.write("")
-
-        # ── Linha 2: Cidade | Estado/País | Latitude | Longitude ──────────
-        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>", unsafe_allow_html=True)
-
-        # Opções do seletor: 27 estados + entrada Internacional
-        _OPCOES_LOCAL = _OPCOES_ESTADO + ["🌍 Internacional"]
-
-        # Detecta se o _fill é internacional (tem pais diferente de BR, sem estado)
-        _fill_is_intl = (
-            _fill and
-            not _fill.get("estado") and
-            str(_fill.get("pais", "BR")).upper() not in ("", "BR")
+    r2c1, r2c2, r2c3, r2c4 = st.columns([1.4, 1.6, 1.0, 1.0])
+    with r2c1:
+        cidade = st.text_input("Cidade", value=_fill.get("cidade", "") if _fill else "", placeholder="ex: Porto Alegre")
+    with r2c2:
+        local_opcao = st.selectbox(
+            "Estado / País",
+            options=_OPCOES_LOCAL,
+            index=_OPCOES_LOCAL.index(_fill_opcao_local),
+            help="Estado BR (lat/lon automáticos) ou 🌍 Internacional para coordenadas livres.",
         )
 
-        if _fill_is_intl:
-            _fill_opcao_local = "🌍 Internacional"
-        else:
-            _fill_estado = _fill.get("estado") if _fill else None
-            if not _fill_estado and _fill and _fill.get("latitude") and _fill.get("longitude"):
-                _fill_estado = _estado_da_coordenada(
-                    float(_fill["latitude"]), float(_fill["longitude"])
-                )
-            _fill_estado = _fill_estado or "RS"
-            _fill_opcao_local = next(
-                (o for o in _OPCOES_ESTADO if o.startswith(_fill_estado + " ")), _OPCOES_ESTADO[0]
-            )
+    _is_intl = local_opcao == "🌍 Internacional"
+    if _is_intl:
+        estado_sigla = ""
+        _lat_def = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else 48.8566
+        _lon_def = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else 2.3522
+        _pais_def = str(_fill.get("pais", "FR")).upper() if (_fill and _fill.get("pais")) else "FR"
+    else:
+        estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
+        _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
+        _pais_def = "BR"
 
-        _is_intl_pre = _fill_is_intl  # usado apenas para defaults antes do widget
-
-        if _is_intl_pre:
-            _lat_def_pre = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else 48.8566
-            _lon_def_pre = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else 2.3522
-        else:
-            _estado_pre = _fill.get("estado") if _fill else "RS"
-            _estado_pre = _estado_pre or "RS"
-            _, _lat_def_pre, _lon_def_pre = ESTADOS_BR.get(_estado_pre, ESTADOS_BR["RS"])
-
-        _cidade_def = _fill.get("cidade", "") if _fill else ""
-
-        r2c1, r2c2, r2c3, r2c4 = st.columns([1.4, 1.6, 1.0, 1.0])
-
-        with r2c1:
-            cidade = st.text_input(
-                "Cidade",
-                value=_cidade_def,
-                placeholder="ex: Porto Alegre",
-            )
-
-        with r2c2:
-            local_opcao = st.selectbox(
-                "Estado / País",
-                options=_OPCOES_LOCAL,
-                index=_OPCOES_LOCAL.index(_fill_opcao_local),
-                help="Estado BR (lat/lon automáticos) ou 🌍 Internacional para coordenadas livres.",
-            )
-
-        _is_intl = local_opcao == "🌍 Internacional"
-
-        if _is_intl:
-            estado_sigla = ""
-            _lat_def = float(_fill["latitude"]) if (_fill and _fill.get("latitude")) else _lat_def_pre
-            _lon_def = float(_fill["longitude"]) if (_fill and _fill.get("longitude")) else _lon_def_pre
-            _pais_def = str(_fill.get("pais", "FR")).upper() if (_fill and _fill.get("pais")) else "FR"
-        else:
-            estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
-            _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
-            _pais_def = "BR"
-
-        with r2c3:
-            lat = st.number_input(
-                "Latitude",
-                value=_lat_def,
-                format="%.4f", step=0.0001,
-                help="Automático para BR; editável para Internacional.",
-            )
-
-        with r2c4:
-            lon = st.number_input(
-                "Longitude",
-                value=_lon_def,
-                format="%.4f", step=0.0001,
-                help="Automático para BR; editável para Internacional.",
-            )
-
-        # País ISO-2 visível apenas para Internacional
-        if _is_intl:
-            pais_intl = st.text_input(
-                "País (ISO-2)",
-                value=_pais_def,
-                placeholder="ex: JP, AR, US, PT",
-                max_chars=2,
-                help="Código ISO 3166-1 alpha-2. Janela GPS crítica: < 48h para internacionais.",
-            ).upper().strip() or "XX"
-        else:
-            pais_intl = "BR"
-
-        st.write("")
-
-        # ── Linha 3: Data | Hora local | (espaço reservado) ───────────────
-        st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🕐 Data e Hora Local da Transação</p>", unsafe_allow_html=True)
-
-        # Valores padrão para data/hora a partir do _fill
-        _fill_ts = _fill.get("timestamp", "") if _fill else ""
-        try:
-            _fill_dt = datetime.fromisoformat(_fill_ts[:19]) if _fill_ts else datetime.now()
-        except (ValueError, TypeError):
-            _fill_dt = datetime.now()
-
-        r3c1, r3c2, r3c3 = st.columns([1.2, 1.0, 1.8])
-
-        with r3c1:
-            data_local = st.date_input(
-                "Data local",
-                value=_fill_dt.date(),
-            )
-
-        with r3c2:
-            hora_local = st.time_input(
-                "Hora local",
-                value=_fill_dt.time(),
-                step=60,
-            )
-
-        with r3c3:
-            fuso_horario = st.text_input(
-                "Fuso Horário",
-                value=_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo",
-                placeholder="ex: America/Sao_Paulo, Asia/Tokyo",
-                help="Fuso IANA. Usado para exibição da data/hora ao associado.",
-            )
-
-        st.write("")
-
-        submitted = st.form_submit_button(
-            "🔍 Analisar Transação",
-            use_container_width=True,
-            type="primary",
+    with r2c3:
+        lat = st.number_input(
+            "Latitude",
+            value=_lat_def,
+            format="%.4f",
+            step=0.0001,
+            help="Automático para BR; editável para Internacional.",
+            key=f"lat_input_{local_opcao}"
         )
+    with r2c4:
+        lon = st.number_input(
+            "Longitude",
+            value=_lat_def if _is_intl else _lon_def, # Ajuste para garantir sincronismo
+            format="%.4f",
+            step=0.0001,
+            help="Automático para BR; editável para Internacional.",
+            key=f"lon_input_{local_opcao}"
+        )
+
+    if _is_intl:
+        pais_intl = st.text_input(
+            "País (ISO-2)",
+            value=_pais_def,
+            placeholder="ex: JP, AR, US, PT",
+            max_chars=2,
+            help="Código ISO 3166-1 alpha-2. Janela GPS crítica: < 48h para internacionais.",
+        ).upper().strip() or "XX"
+    else:
+        pais_intl = "BR"
+    st.write( )
+
+    # ── Linha 3: Data | Hora local ───────────────────────────────────────────────
+    st.markdown("<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🕐 Data e Hora Local da Transação</p>", unsafe_allow_html=True)
+    _fill_ts = _fill.get("timestamp", "") if _fill else ""
+    try:
+        _fill_dt = datetime.fromisoformat(_fill_ts[:19]) if _fill_ts else datetime.now()
+    except (ValueError, TypeError):
+        _fill_dt = datetime.now()
+
+    r3c1, r3c2, r3c3 = st.columns([1.2, 1.0, 1.8])
+    with r3c1:
+        data_local = st.date_input("Data local", value=_fill_dt.date())
+    with r3c2:
+        hora_local = st.time_input("Hora local", value=_fill_dt.time(), step=60)
+    with r3c3:
+        fuso_horario = st.text_input(
+            "Fuso Horário",
+            value=_fill.get("fuso_horario", "America/Sao_Paulo") if _fill else "America/Sao_Paulo",
+            placeholder="ex: America/Sao_Paulo, Asia/Tokyo",
+            help="Fuso IANA. Usado para exibição da data/hora ao associado.",
+        )
+    st.write( )
+
+    submitted = st.button(
+        "🔍 Analisar Transação",
+        use_container_width=True,
+        type="primary",
+    )      
+                
+        
 
     if submitted:
         # Monta offset a partir do fuso informado
