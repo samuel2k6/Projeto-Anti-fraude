@@ -940,7 +940,7 @@ def explicar_risco_fraude(resultado_analise_json: str) -> str:
     orientacao = (
         "Responda SIM para confirmar que foi você e liberar a compra. "
         "Responda NÃO para bloquear e acionar nossa equipe de segurança. "
-        "Se não responder em 2 minutos, a compra será bloqueada automaticamente por segurança."
+        "Se não responder em 2 minutos, será orientado para se comunicar com sua agência sicredi."
     )
 
     return json.dumps({
