@@ -218,10 +218,12 @@ st.markdown("""
 
 
 # ── Estado da sessão ──────────────────────────────────────────────────────────
-if "messages"      not in st.session_state: st.session_state.messages      = []
-if "historico_mcp" not in st.session_state: st.session_state.historico_mcp = {}
-if "aguardando_resp" not in st.session_state: st.session_state.aguardando_resp = None
-if "ultima_analise"  not in st.session_state: st.session_state.ultima_analise  = None
+if "messages"        not in st.session_state: st.session_state.messages        = []
+if "historico_mcp"   not in st.session_state: st.session_state.historico_mcp   = {}
+if "aguardando_resp" not in st.session_state: st.session_state.aguardando_resp  = None
+if "ultima_analise"  not in st.session_state: st.session_state.ultima_analise   = None
+if "estado_padrao"   not in st.session_state: st.session_state.estado_padrao    = None
+if "_estado_anterior" not in st.session_state: st.session_state._estado_anterior = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -371,6 +373,7 @@ def _processar_resposta_hitl(resposta: str, analise: dict, explicacao: dict) -> 
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+    # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🛡️ Agente Anti-Fraude")
     st.markdown("**IBM watsonx Orchestrate** · Sicredi")
@@ -480,17 +483,6 @@ with st.sidebar:
                 mcp_server._HISTORICO.pop(assoc, None)
                 st.session_state.historico_mcp.pop(assoc, None)
             st.session_state["_fill_tx"] = tx
-            if tx.get("estado") in ESTADOS_BR:
-                local_opcao = next(
-                    opcao
-                    for opcao, sigla in _SIGLA_DE_OPCAO.items()
-                    if sigla == tx["estado"]
-                )
-            else:
-                local_opcao = "🌍 Internacional"
-            st.session_state["local_opcao"] = local_opcao
-            st.session_state[f"lat_input_{local_opcao}"] = float(tx["latitude"])
-            st.session_state[f"lon_input_{local_opcao}"] = float(tx["longitude"])
             st.rerun()
 
     st.divider()
@@ -498,10 +490,15 @@ with st.sidebar:
     st.caption("Simulação do agente anti-fraude Sicredi rodando localmente com o motor MCP. As análises são executadas em memória — sem chamadas externas.")
     
     if st.button("🗑️ Limpar conversa", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.historico_mcp = {}
+        _padrao = st.session_state.get("estado_padrao")
+        st.session_state.messages        = []
+        st.session_state.historico_mcp   = {}
         st.session_state.aguardando_resp = None
-        st.session_state.ultima_analise = None
+        st.session_state.ultima_analise  = None
+        st.session_state.estado_padrao   = None
+        st.session_state._estado_anterior = None
+        # Restaura campos do formulário para o estado do primeiro envio
+        st.session_state._fill_tx = _padrao
         st.rerun()
 
 
@@ -561,55 +558,6 @@ if st.session_state.aguardando_resp:
 else:
     # ── Formulário normal de transação ────────────────────────────────────
 
-    _OPCOES_LOCAL = _OPCOES_ESTADO + ["🌍 Internacional"]
-
-    _fill_is_intl = (
-        _fill
-        and not _fill.get("estado")
-        and str(_fill.get("pais", "BR")).upper() not in ("", "BR")
-    )
-
-    if _fill_is_intl:
-        _fill_opcao_local = "🌍 Internacional"
-    else:
-        _fill_estado = _fill.get("estado") if _fill else None
-
-        if (
-            not _fill_estado
-            and _fill
-            and _fill.get("latitude") is not None
-            and _fill.get("longitude") is not None
-        ):
-            _fill_estado = _estado_da_coordenada(
-                float(_fill["latitude"]),
-                float(_fill["longitude"])
-            )
-
-        _fill_estado = _fill_estado or "RS"
-
-        _fill_opcao_local = next(
-            (
-                opcao for opcao in _OPCOES_ESTADO
-                if opcao.startswith(_fill_estado + " —")
-            ),
-            _OPCOES_ESTADO[0]
-        )
-
-    if st.session_state.get("local_opcao") not in _OPCOES_LOCAL:
-        st.session_state["local_opcao"] = _fill_opcao_local
-
-    st.markdown(
-        "<p style='font-weight:600;color:#3d3d3d;margin-bottom:4px'>🗺️ Localização</p>",
-        unsafe_allow_html=True
-    )
-    local_opcao = st.selectbox(
-        "Estado / País",
-        options=_OPCOES_LOCAL,
-        key="local_opcao",
-        help="Ao trocar o estado, latitude e longitude são atualizadas automaticamente. "
-             "Coordenadas internacionais podem ser editadas."
-    )
-
     with st.form("form_transacao", clear_on_submit=False):
 
         # ── Linha 1: Dados da transação ───────────────────────────────────
@@ -666,13 +614,57 @@ else:
             unsafe_allow_html=True
         )
 
-        r2c1, r2c2, r2c3 = st.columns([1.4, 1.0, 1.0])
+        _OPCOES_LOCAL = _OPCOES_ESTADO + ["🌍 Internacional"]
+
+        _fill_is_intl = (
+            _fill
+            and not _fill.get("estado")
+            and str(_fill.get("pais", "BR")).upper() not in ("", "BR")
+        )
+
+        if _fill_is_intl:
+            _fill_opcao_local = "🌍 Internacional"
+        else:
+            _fill_estado = _fill.get("estado") if _fill else None
+
+            if (
+                not _fill_estado
+                and _fill
+                and _fill.get("latitude") is not None
+                and _fill.get("longitude") is not None
+            ):
+                _fill_estado = _estado_da_coordenada(
+                    float(_fill["latitude"]),
+                    float(_fill["longitude"])
+                )
+
+            _fill_estado = _fill_estado or "RS"
+
+            _fill_opcao_local = next(
+                (
+                    o for o in _OPCOES_ESTADO
+                    if o.startswith(_fill_estado + " —")
+                ),
+                _OPCOES_ESTADO[0]
+            )
+
+        r2c1, r2c2, r2c3, r2c4 = st.columns(
+            [1.4, 1.6, 1.0, 1.0]
+        )
 
         with r2c1:
             cidade = st.text_input(
                 "Cidade",
                 value=_fill.get("cidade", "") if _fill else "",
                 placeholder="ex: Porto Alegre"
+            )
+
+        with r2c2:
+            local_opcao = st.selectbox(
+                "Estado / País",
+                options=_OPCOES_LOCAL,
+                index=_OPCOES_LOCAL.index(_fill_opcao_local),
+                help="Estado BR (lat/lon automáticos) ou Internacional para coordenadas livres."
             )
 
         _is_intl = local_opcao == "🌍 Internacional"
@@ -698,32 +690,46 @@ else:
                 else "FR"
             )
 
+            # Ao entrar no modo Internacional, reseta os valores automáticos
+            if st.session_state._estado_anterior != "🌍 Internacional":
+                st.session_state["_lat_auto"] = _lat_def
+                st.session_state["_lon_auto"] = _lon_def
+                st.session_state._estado_anterior = "🌍 Internacional"
+
         else:
             estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
-
             _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
-
             _pais_def = "BR"
 
-        with r2c2:
-            lat = st.number_input(
-                "Latitude",
-                value=_lat_def,
-                format="%.4f",
-                step=0.0001,
-                help="Automático para BR; editável para Internacional.",
-                key=f"lat_input_{local_opcao}"
-            )
+            # Atualiza automaticamente as coordenadas ao trocar de estado
+            if st.session_state._estado_anterior != local_opcao:
+                st.session_state["_lat_auto"] = _lat_def
+                st.session_state["_lon_auto"] = _lon_def
+                st.session_state._estado_anterior = local_opcao
+
+        _lat_widget = st.session_state.get("_lat_auto", _lat_def)
+        _lon_widget = st.session_state.get("_lon_auto", _lon_def)
 
         with r2c3:
-            lon = st.number_input(
-                "Longitude",
-                value=_lon_def,
+            lat = st.number_input(
+                "Latitude",
+                value=_lat_widget,
                 format="%.4f",
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
-                key=f"lon_input_{local_opcao}"
+                key="_lat_auto",
             )
+
+        with r2c4:
+            lon = st.number_input(
+                "Longitude",
+                value=_lon_widget,
+                format="%.4f",
+                step=0.0001,
+                help="Automático para BR; editável para Internacional.",
+                key="_lon_auto",
+            )
+            
 
         if _is_intl:
             pais_intl = st.text_input(
@@ -841,6 +847,21 @@ else:
         else:
             tx["estado"] = estado_sigla
             tx["pais"] = "BR"
+
+        # ── Persiste estado padrão no primeiro envio ─────────────────────
+        if st.session_state.estado_padrao is None:
+            st.session_state.estado_padrao = {
+                "associado_id": tx["associado_id"],
+                "valor":        tx["valor"],
+                "categoria":    tx["categoria"],
+                "cidade":       tx.get("cidade", ""),
+                "estado":       tx.get("estado", ""),
+                "pais":         tx.get("pais", "BR"),
+                "latitude":     tx["latitude"],
+                "longitude":    tx["longitude"],
+                "fuso_horario": tx.get("fuso_horario", "America/Sao_Paulo"),
+                "timestamp":    tx["timestamp"],
+            }
 
         # ── Mensagem do usuário ──────────────────────────────────────────
 
