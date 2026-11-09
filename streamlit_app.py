@@ -704,7 +704,7 @@ else:
                 format="%.4f",
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
-                key=f"lat_input_{local_opcao}"
+                key=f"lat_input_{local_opcao}",
             )
 
         with r2c4:
@@ -714,7 +714,7 @@ else:
                 format="%.4f",
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
-                key=f"lon_input_{local_opcao}"
+                key=f"lon_input_{local_opcao}",
             )
 
         if _is_intl:
