@@ -683,32 +683,37 @@ else:
                 else "FR"
             )
 
-        else:
-            estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
+       else:
+        estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
 
-            _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
+        _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
 
-            _pais_def = "BR"
+        _pais_def = "BR"
+
+    # Atualiza automaticamente as coordenadas ao trocar de estado
+        st.session_state[f"lat_input_{local_opcao}"] = _lat_def
+        st.session_state[f"lon_input_{local_opcao}"] = _lon_def
 
         with r2c3:
-            lat = st.number_input(
-                "Latitude",
-                value=_lat_def,
-                format="%.4f",
-                step=0.0001,
-                help="Automático para BR; editável para Internacional.",
-                key=f"lat_input_{local_opcao}"
-            )
+    lat = st.number_input(
+        "Latitude",
+        value=_lat_def,
+        format="%.4f",
+        step=0.0001,
+        help="Automático para BR; editável para Internacional.",
+        key=f"lat_input_{local_opcao}"
+    )
 
-        with r2c4:
-            lon = st.number_input(
-                "Longitude",
-                value=_lon_def,
-                format="%.4f",
-                step=0.0001,
-                help="Automático para BR; editável para Internacional.",
-                key=f"lon_input_{local_opcao}"
-            )
+with r2c4:
+    lon = st.number_input(
+        "Longitude",
+        value=_lon_def,
+        format="%.4f",
+        step=0.0001,
+        help="Automático para BR; editável para Internacional.",
+        key=f"lon_input_{local_opcao}"
+    )
+            
 
         if _is_intl:
             pais_intl = st.text_input(
