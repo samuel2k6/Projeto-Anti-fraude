@@ -558,7 +558,7 @@ if st.session_state.aguardando_resp:
 else:
     # ── Formulário normal de transação ────────────────────────────────────
 
-    with st.form("form_transacao", clear_on_submit=False):
+    with st.container():
 
         # ── Linha 1: Dados da transação ───────────────────────────────────
 
@@ -705,6 +705,7 @@ else:
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
                 key=f"lat_input_{local_opcao}",
+                disabled=not _is_intl,
             )
 
         with r2c4:
@@ -715,6 +716,7 @@ else:
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
                 key=f"lon_input_{local_opcao}",
+                disabled=not _is_intl,
             )
 
         if _is_intl:
@@ -775,7 +777,7 @@ else:
 
         # ── Botão de envio ───────────────────────────────────────────────
 
-        submitted = st.form_submit_button(
+        submitted = st.button(
             "🔍 Analisar Transação",
             use_container_width=True,
             type="primary",
