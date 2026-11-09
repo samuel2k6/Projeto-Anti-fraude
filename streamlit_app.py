@@ -690,46 +690,32 @@ else:
                 else "FR"
             )
 
-            # Ao entrar no modo Internacional, reseta os valores automáticos
-            if st.session_state._estado_anterior != "🌍 Internacional":
-                st.session_state["_lat_auto"] = _lat_def
-                st.session_state["_lon_auto"] = _lon_def
-                st.session_state._estado_anterior = "🌍 Internacional"
-
         else:
             estado_sigla = _SIGLA_DE_OPCAO[local_opcao]
+
             _, _lat_def, _lon_def = ESTADOS_BR[estado_sigla]
+
             _pais_def = "BR"
-
-            # Atualiza automaticamente as coordenadas ao trocar de estado
-            if st.session_state._estado_anterior != local_opcao:
-                st.session_state["_lat_auto"] = _lat_def
-                st.session_state["_lon_auto"] = _lon_def
-                st.session_state._estado_anterior = local_opcao
-
-        _lat_widget = st.session_state.get("_lat_auto", _lat_def)
-        _lon_widget = st.session_state.get("_lon_auto", _lon_def)
 
         with r2c3:
             lat = st.number_input(
                 "Latitude",
-                value=_lat_widget,
+                value=_lat_def,
                 format="%.4f",
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
-                key="_lat_auto",
+                key=f"lat_input_{local_opcao}"
             )
 
         with r2c4:
             lon = st.number_input(
                 "Longitude",
-                value=_lon_widget,
+                value=_lon_def,
                 format="%.4f",
                 step=0.0001,
                 help="Automático para BR; editável para Internacional.",
-                key="_lon_auto",
+                key=f"lon_input_{local_opcao}"
             )
-            
 
         if _is_intl:
             pais_intl = st.text_input(
